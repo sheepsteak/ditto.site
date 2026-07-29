@@ -1,5 +1,17 @@
 import type { Page } from "playwright";
 
+async function withTimeout<T>(operation: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<T>((resolve) => { timer = setTimeout(() => resolve(fallback), ms); }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /**
  * Pre-snapshot stabilization (Stage 2). Two dynamic behaviors otherwise make the
  * per-viewport snapshots disagree with each other and with what a settled visitor sees:
@@ -98,10 +110,11 @@ export async function promoteLazyMediaInPage(): Promise<number> {
 /** Node-side wrapper: bounded + never fatal (a hung page just skips promotion). */
 export async function promoteLazyMedia(page: Page): Promise<number> {
   try {
-    return await Promise.race([
+    return await withTimeout(
       page.evaluate(promoteLazyMediaInPage),
-      new Promise<number>((res) => setTimeout(() => res(0), 8000)),
-    ]);
+      8000,
+      0,
+    );
   } catch {
     return 0;
   }
@@ -169,10 +182,11 @@ export async function settleScrollReveals(page: Page): Promise<RevealSettleResul
   const cfg = { dwellMs: REVEAL_DWELL_MS, maxSteps: REVEAL_MAX_STEPS, animWaitMs: REVEAL_ANIMATION_WAIT_MS };
   const bound = cfg.maxSteps * cfg.dwellMs + cfg.animWaitMs + 8000;
   try {
-    return await Promise.race([
+    return await withTimeout(
       page.evaluate(settleScrollRevealsInPage, cfg),
-      new Promise<RevealSettleResult>((res) => setTimeout(() => res(empty), bound)),
-    ]);
+      bound,
+      empty,
+    );
   } catch {
     return empty;
   }
@@ -234,10 +248,11 @@ export function neutralizePreRevealInPage(): number {
 /** Node-side wrapper: bounded + never fatal. */
 export async function neutralizePreReveal(page: Page): Promise<number> {
   try {
-    return await Promise.race([
+    return await withTimeout(
       page.evaluate(neutralizePreRevealInPage),
-      new Promise<number>((res) => setTimeout(() => res(0), 8000)),
-    ]);
+      8000,
+      0,
+    );
   } catch {
     return 0;
   }
@@ -295,10 +310,11 @@ export function neutralizeScrollTimelineAnimationsInPage(): number {
 /** Node-side wrapper: bounded + never fatal. */
 export async function neutralizeScrollTimelineAnimations(page: Page): Promise<number> {
   try {
-    return await Promise.race([
+    return await withTimeout(
       page.evaluate(neutralizeScrollTimelineAnimationsInPage),
-      new Promise<number>((res) => setTimeout(() => res(0), 5000)),
-    ]);
+      5000,
+      0,
+    );
   } catch {
     return 0;
   }
@@ -426,10 +442,11 @@ export async function settleCarouselsInPage(): Promise<CarouselSettleResult> {
 export async function settleCarousels(page: Page): Promise<CarouselSettleResult> {
   const empty: CarouselSettleResult = { roots: 0, normalized: 0, neutralizedAnims: 0 };
   try {
-    return await Promise.race([
+    return await withTimeout(
       page.evaluate(settleCarouselsInPage),
-      new Promise<CarouselSettleResult>((res) => setTimeout(() => res(empty), 10_000)),
-    ]);
+      10_000,
+      empty,
+    );
   } catch {
     return empty;
   }
