@@ -113,6 +113,22 @@ function viewportHeight(width: number): number {
   return VIEWPORT_HEIGHTS[width] ?? Math.round(width * 0.66);
 }
 
+async function withTimeout<T>(operation: Promise<T>, ms: number, onTimeout: () => T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<T>((resolve, reject) => {
+        timer = setTimeout(() => {
+          try { resolve(onTimeout()); } catch (error) { reject(error); }
+        }, ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 // ---- Asset download retry (Fix: transient failures silently degrade to placeholders) ----
 
 /** Types whose absence is visible in the clone (image → transparent GIF, video → blank,
@@ -299,10 +315,11 @@ async function settle(page: import("playwright").Page, maxMs = 2500): Promise<vo
   try {
     // document.fonts.ready can never resolve when a font request hangs (heavy SaaS
     // pages), and page.evaluate has no default timeout — so bound it explicitly.
-    await Promise.race([
+    await withTimeout(
       page.evaluate(() => (document as Document).fonts?.ready as unknown as Promise<void>),
-      new Promise<void>((r) => setTimeout(r, 6000)),
-    ]);
+      6000,
+      () => undefined,
+    );
   } catch { /* ignore */ }
   await page.waitForTimeout(250);
 }
@@ -318,7 +335,7 @@ async function settle(page: import("playwright").Page, maxMs = 2500): Promise<vo
  */
 async function settleScrollTopBeforeSnapshot(page: import("playwright").Page): Promise<void> {
   try {
-    await Promise.race([
+    await withTimeout(
       page.evaluate(async () => {
         const raf = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
         const resetAll = () => {
@@ -337,8 +354,9 @@ async function settleScrollTopBeforeSnapshot(page: import("playwright").Page): P
         resetAll();
         await raf();
       }),
-      new Promise<void>((r) => setTimeout(r, 4000)),
-    ]);
+      4000,
+      () => undefined,
+    );
   } catch { /* ignore — a best-effort reset never blocks the snapshot */ }
 }
 
@@ -440,10 +458,11 @@ async function clickDismiss(page: import("playwright").Page): Promise<string[]> 
   // (Attentive/Recart/…) host their Decline/close controls inside an iframe that the top
   // document cannot reach, but Playwright can evaluate inside each frame from Node.
   const runOne = (frame: import("playwright").Frame): Promise<string[]> =>
-    Promise.race([
+    withTimeout(
       frame.evaluate(clickDismissInPage).catch(() => [] as string[]),
-      new Promise<string[]>((res) => setTimeout(() => res([]), 6000)),
-    ]);
+      6000,
+      () => [],
+    );
   try {
     const frames = page.frames();
     const results = await Promise.all(frames.map((f) => runOne(f).catch(() => [] as string[])));
@@ -622,10 +641,11 @@ export function finalizeOverlaysInPage(): FinalizeOverlaysResult {
 
 async function finalizeOverlays(page: import("playwright").Page): Promise<FinalizeOverlaysResult> {
   try {
-    return await Promise.race([
+    return await withTimeout(
       page.evaluate(finalizeOverlaysInPage),
-      new Promise<FinalizeOverlaysResult>((res) => setTimeout(() => res({ overlaysRemaining: 0, removed: 0, blocking: false, removedLabels: [] }), 6000)),
-    ]);
+      6000,
+      () => ({ overlaysRemaining: 0, removed: 0, blocking: false, removedLabels: [] }),
+    );
   } catch {
     return { overlaysRemaining: 0, removed: 0, blocking: false, removedLabels: [] };
   }
@@ -639,7 +659,7 @@ async function finalizeOverlays(page: import("playwright").Page): Promise<Finali
  */
 async function waitForQuiescence(page: import("playwright").Page, maxMs = 4000): Promise<boolean> {
   try {
-    return await Promise.race([
+    return await withTimeout(
       page.evaluate(async (budget: number) => {
         const sample = (): string => {
           const els = Array.from(document.body.querySelectorAll("*")).filter((e) => {
@@ -662,8 +682,9 @@ async function waitForQuiescence(page: import("playwright").Page, maxMs = 4000):
         }
         return stable >= 3;
       }, maxMs),
-      new Promise<boolean>((res) => setTimeout(() => res(false), maxMs + 1500)),
-    ]);
+      maxMs + 1500,
+      () => false,
+    );
   } catch {
     return false;
   }
@@ -690,7 +711,7 @@ async function waitForQuiescence(page: import("playwright").Page, maxMs = 4000):
 type VideoStillPlan = { stills: Array<{ url: string; dataUrl: string }>; shots: Array<{ url: string; sel: string }> };
 async function captureVideoStills(page: import("playwright").Page): Promise<VideoStillPlan> {
   try {
-    const plan = await Promise.race([
+    const plan = await withTimeout(
       page.evaluate(async () => {
         const stills: Array<{ url: string; dataUrl: string }> = [];
         const shots: Array<{ url: string; sel: string }> = [];
@@ -748,8 +769,9 @@ async function captureVideoStills(page: import("playwright").Page): Promise<Vide
         }
         return { stills, shots };
       }),
-      new Promise<VideoStillPlan>((res) => setTimeout(() => res({ stills: [], shots: [] }), 12000)),
-    ]);
+      12000,
+      () => ({ stills: [], shots: [] }),
+    );
     return plan;
   } catch {
     return { stills: [], shots: [] };
@@ -797,10 +819,11 @@ export function captureCanvasStillsInPage(): CanvasStillPlan {
 
 async function captureCanvasStills(page: import("playwright").Page): Promise<CanvasStillPlan> {
   try {
-    return await Promise.race([
+    return await withTimeout(
       page.evaluate(captureCanvasStillsInPage),
-      new Promise<CanvasStillPlan>((res) => setTimeout(() => res({ stills: [], shots: [] }), 12_000)),
-    ]);
+      12_000,
+      () => ({ stills: [], shots: [] }),
+    );
   } catch {
     return { stills: [], shots: [] };
   }
@@ -1487,7 +1510,9 @@ export async function captureSite(opts: {
 
       // (Scroll-reveal probing happens once, before the viewport loop — see the reveal
       // settling pass above; by this point all one-shot reveals have already fired.)
-      await autoScroll(page, vh);
+      // Offline MHTML is already a frozen resource snapshot, and file-backed
+      // documents may suspend autoScroll's in-page timer.
+      if (!opts.offline) await autoScroll(page, vh);
       await settle(page, 1500);
       await applyDismiss("post-scroll");
       dismissUnion.overlaysRemaining = Math.max(dismissUnion.overlaysRemaining, overlaysRemaining);
@@ -1617,10 +1642,11 @@ export async function captureSite(opts: {
       // dead frames) get an element-screenshot recorded as the iframe's background at the
       // canonical viewport, so the box at least PAINTS. Runs before the main collectPage so
       // the fallback's inline background is part of the canonical computed style.
-      const frameCands: FrameCandidate[] = await Promise.race([
+      const frameCands: FrameCandidate[] = await withTimeout(
         page.evaluate(enumerateFramesInPage),
-        new Promise<FrameCandidate[]>((res) => setTimeout(() => res([]), 8000)),
-      ]).catch(() => [] as FrameCandidate[]);
+        8000,
+        () => [],
+      ).catch(() => [] as FrameCandidate[]);
       const frameGrafts: Array<{ cand: FrameCandidate; snap: PageSnapshot }> = [];
       let graftBudget = MAX_GRAFT_FRAMES;
       let stillBudget = MAX_GRAFT_FRAMES; // fallback stills share the same per-page bound
@@ -1636,10 +1662,11 @@ export async function captureSite(opts: {
             const frame = handle ? await handle.contentFrame() : null;
             if (frame) {
               await frame.evaluate(ESBUILD_SHIM);
-              frameSnap = await Promise.race([
+              frameSnap = await withTimeout(
                 frame.evaluate(collectPage, { maxNodes: FRAME_GRAFT_MAX_NODES }),
-                new Promise<never>((_, rej) => setTimeout(() => rej(new Error("frame collect timeout")), 20_000)),
-              ]);
+                20_000,
+                () => { throw new Error("frame collect timeout"); },
+              );
             }
             await handle?.dispose();
           } catch (e) {
@@ -1724,10 +1751,11 @@ export async function captureSite(opts: {
 
       // Bound the in-page DOM walk: page.evaluate has no default timeout, so a
       // pathologically large/animated DOM (e.g. asana.com) could hang forever.
-      const snapshot: PageSnapshot = await Promise.race([
+      const snapshot: PageSnapshot = await withTimeout(
         page.evaluate(collectPage),
-        new Promise<never>((_, rej) => setTimeout(() => rej(new Error(`collectPage timeout vp${vw}`)), 60_000)),
-      ]);
+        60_000,
+        () => { throw new Error(`collectPage timeout vp${vw}`); },
+      );
       snapshot.doc.url = opts.url;
 
       // Graft the captured frame subtrees into this viewport's snapshot (offset bboxes,
@@ -1763,10 +1791,11 @@ export async function captureSite(opts: {
       // response (common on heavy SaaS pages) would hang allSettled forever. By
       // now bodies have been downloading throughout navigation+scroll; stragglers
       // are dropped (the post-pass fallback fetch re-fetches anything missing).
-      await Promise.race([
+      await withTimeout(
         Promise.allSettled(bodyPromises),
-        new Promise((r) => setTimeout(r, 20_000)),
-      ]);
+        20_000,
+        () => [],
+      );
 
       // Persist DOM snapshot, and (unless skipped for a production clone) the full-page screenshot.
       writeJSONCompact(join(captureDir, `dom-${vw}.json`), snapshot);
@@ -1866,10 +1895,11 @@ export async function captureSite(opts: {
     // field. The context closes right after, so the swept viewport size needs no restore.
     if (opts.breakpoints ?? true) {
       try {
-        const edges = await Promise.race([
+        const edges = await withTimeout(
           discoverBreakpoints(page, { min: 320, max: 1920 }),
-          new Promise<number[]>((_, rej) => setTimeout(() => rej(new Error("breakpoint sweep timeout")), 60_000)),
-        ]);
+          60_000,
+          () => { throw new Error("breakpoint sweep timeout"); },
+        );
         discoveredBreakpoints = edges;
         log({ event: "breakpoints_discovered", edges });
       } catch (e) {
