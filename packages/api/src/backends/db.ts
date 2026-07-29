@@ -65,7 +65,7 @@ export class DbBackend implements Backend {
     if (!job) return null;
     const base: JobView = {
       jobId: job.id,
-      url: clone.url,
+      url: job.url,
       kind: job.kind as "clone" | "clone_site",
       status: job.status as JobStatus,
       options: job.options as CloneOptions,
@@ -79,7 +79,7 @@ export class DbBackend implements Backend {
         const env = clone.fileManifest as StoredEnvelope;
         let totalBytes = 0;
         for (const f of env.files) totalBytes += f.bytes;
-        return { ...base, capture: clone.captureMeta as JobView["capture"], verify: clone.verify ?? undefined, routes: env.routes, fileCount: env.files.length, totalBytes };
+        return { ...base, url: clone.url, capture: clone.captureMeta as JobView["capture"], verify: clone.verify ?? undefined, routes: env.routes, fileCount: env.files.length, totalBytes };
       }
     }
     return base;
@@ -93,7 +93,7 @@ export class DbBackend implements Backend {
     if (!clone) return { ready: false, status: "running" };
     const env = clone.fileManifest as StoredEnvelope;
     const result = await restResultFromStored(jobId, {
-      url: job.url,
+      url: clone.url,
       kind: job.kind as "clone" | "clone_site",
       options: job.options as CloneOptions,
       compilerVersion: job.compilerVersion ?? COMPILER_VERSION,
