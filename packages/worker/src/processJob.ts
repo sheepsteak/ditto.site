@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { canonicalOptions, verifyCloneJobResult, type CloneJobResult, type CloneOptions, type RunCloneJobInput } from "@cloner/core";
+import { canonicalOptions, createMhtmlSource, verifyCloneJobResult, type CloneJobResult, type CloneOptions, type CloneSource, type RunCloneJobInput } from "@cloner/core";
 import { repo, type Db } from "@cloner/db";
 import type { ArtifactStore } from "@cloner/storage";
 
@@ -35,10 +35,22 @@ export async function processCloneJob(deps: ProcessDeps, jobId: string): Promise
   const base = mkdtempSync(join(tmpdir(), "worker-clone-"));
   try {
     const options = (job.options ?? {}) as CloneOptions;
+    let source: CloneSource;
+    if (job.inputKind === "mhtml") {
+      const bytes = await store.getInput(jobId);
+      if (!bytes) throw new Error("MHTML input artifact is missing");
+      const mhtml = createMhtmlSource(bytes, job.inputFilename ?? "snapshot.mhtml");
+      if (job.inputSha256 && mhtml.sha256 !== job.inputSha256) {
+        throw new Error("MHTML input checksum mismatch");
+      }
+      source = mhtml;
+    } else {
+      source = { kind: "url", url: job.url };
+    }
     // Provision the isolated harness only when this job actually verifies (build).
     const harnessDir = (options.verify || options.asyncVerify) && deps.harnessProvider ? await deps.harnessProvider() : undefined;
     const result = await deps.runJob({
-      url: job.url,
+      source,
       options,
       runsDir: base,
       harnessDir,
@@ -64,7 +76,7 @@ export async function processCloneJob(deps: ProcessDeps, jobId: string): Promise
       await repo.cachePut(db, {
         cacheKey: job.cacheKey,
         jobId,
-        url: job.url,
+        url: result.url,
         optionsHash: canonicalOptions(options),
         compilerVersion: result.compilerVersion,
         expiresAt: new Date(Date.now() + deps.cacheTtlMs),

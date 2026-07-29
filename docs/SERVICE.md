@@ -102,6 +102,7 @@ checked-out `ditto.site` repo with dependencies installed. Do not use
 
 ```
 POST   /v1/clones                 { url, options? }  → 202 {jobId,status} | 200 {cached result | inline result}
+POST   /v1/clones                 multipart { file: *.mhtml|*.mht, options?: JSON } → same result
 POST   /v1/signup                 { email, label? } → 201 {apiKey,message}  (direct public signup when enabled)
 POST   /v1/signup/request         { email } → 202 {message}                 (send verification email)
 POST   /v1/signup/verify          { token } → 201 {apiKey,message}          (consume email token)
@@ -139,6 +140,8 @@ remain `{ verify?, asyncVerify?, maxRoutes?, maxCollection?, captureConcurrency?
 bypasses the cache. Deprecated aliases (`multiPage`, `humanizeMode`) and dev-only escape
 hatches are still accepted for compatibility, but are not part of the normal product surface.
 `Cache-Control: no-cache` is honored as an alias.
+MHTML is a frozen single-page source, so `mode:"multi"` is rejected. Uploaded
+bytes are cached by SHA-256 and limited by `MHTML_MAX_BYTES`.
 
 The private Ion CMS integration is available only through the exact opt-in
 `experimentalContentHandoff: "ion-cms-v1"` on a multi-page request. It is not a
@@ -209,6 +212,7 @@ keys (single vs multi), so neither shadows the other.
 List-then-read so a clone never floods the agent's context:
 
 - `clone_website({ url, options })` → `{ jobId, status }` (returns immediately).
+- `clone_mhtml({ contentBase64, filename?, options? })` → `{ jobId, status }` for a single-page snapshot.
 - `get_clone_status({ jobId })` → `{ status, timings, capture }`.
 - `get_clone_result({ jobId })` → **metadata only** (routes, verify summary, capture, fileCount, totalBytes, bundleUrl).
 - `list_clone_files({ jobId, glob?, route?, cursor?, limit? })` → manifest `[{path,type,bytes,sha256}]`, no content.
@@ -230,6 +234,7 @@ List-then-read so a clone never floods the agent's context:
 | `PUBLIC_BASE_URL` | api | — | absolute base for MCP-returned URLs |
 | `API_KEYS` | api | — | comma-separated keys; empty = open |
 | `RATE_LIMIT_PER_MINUTE` | api | `0` | per key/IP cap (0 = unlimited) |
+| `MHTML_MAX_BYTES` | api | `26214400` | REST/MCP MHTML upload limit |
 | `SIGNUP_ENABLED` | api | `false` | DB mode only: expose public API-key signup routes |
 | `SIGNUP_RATE_LIMIT_PER_HOUR` | api | `3` | per-IP signup cap; `0` disables signup throttling |
 | `DEFAULT_SIGNUP_KEY_RATE_LIMIT` | api | `30` | stored on keys minted by signup; service-wide enforcement still uses `RATE_LIMIT_PER_MINUTE` |

@@ -25,6 +25,17 @@ export class LocalArtifactStore implements ArtifactStore {
     return join(this.baseDir, jobId);
   }
 
+  async putInput(jobId: string, bytes: Buffer): Promise<void> {
+    const dest = join(this.jobDir(jobId), "_input", "source.mhtml");
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, bytes);
+  }
+
+  async getInput(jobId: string): Promise<Buffer | null> {
+    const dest = join(this.jobDir(jobId), "_input", "source.mhtml");
+    return existsSync(dest) ? readFileSync(dest) : null;
+  }
+
   async putClone(jobId: string, files: FileMap): Promise<StoredManifest> {
     const root = this.jobDir(jobId);
     const out: StoredFile[] = [];

@@ -32,6 +32,15 @@ test("cacheKey: stable for equivalent input, varies by options + compilerVersion
   assert.equal(k1, cacheKey("https://x.com/", { mode: "single", styling: "tailwind", noCache: true }, "0.1.0"));
 });
 
+test("cacheKey: MHTML identity uses content hash, not filename", () => {
+  const a = { kind: "mhtml" as const, content: Buffer.from("a"), filename: "one.mhtml", sha256: "abc" };
+  const renamed = { ...a, filename: "two.mhtml" };
+  const changed = { ...a, sha256: "def" };
+  assert.equal(cacheKey(a, {}, "0.1.0"), cacheKey(renamed, {}, "0.1.0"));
+  assert.notEqual(cacheKey(a, {}, "0.1.0"), cacheKey(changed, {}, "0.1.0"));
+  assert.notEqual(cacheKey(a, {}, "0.1.0"), cacheKey({ kind: "url", url: "mhtml:abc" }, {}, "0.1.0"));
+});
+
 test("canonicalOptions: deprecated aliases normalize to product options", () => {
   assert.equal(
     canonicalOptions({ mode: "multi", styling: "css" }),

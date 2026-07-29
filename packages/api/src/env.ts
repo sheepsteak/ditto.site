@@ -40,6 +40,8 @@ export type ApiEnv = {
   ssrfEnabled: boolean;
   /** allow loopback targets through SSRF (local dev cloning of localhost). */
   ssrfAllowLoopback: boolean;
+  /** maximum accepted MHTML upload size. */
+  maxMhtmlBytes: number;
 };
 
 export function loadEnv(): ApiEnv {
@@ -63,5 +65,6 @@ export function loadEnv(): ApiEnv {
     signupCorsOrigins: (process.env.SIGNUP_CORS_ORIGINS ?? "https://ditto.site,https://www.ditto.site").split(",").map((s) => s.trim()).filter(Boolean),
     ssrfEnabled: process.env.SSRF_DISABLE !== "true",
     ssrfAllowLoopback: process.env.SSRF_ALLOW_LOOPBACK === "true",
+    maxMhtmlBytes: parseInt(process.env.MHTML_MAX_BYTES ?? String(25 * 1024 * 1024), 10),
   };
 }

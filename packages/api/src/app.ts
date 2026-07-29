@@ -5,7 +5,7 @@ import { z } from "zod";
 import { RESPONSE_ALREADY_SENT } from "@hono/node-server/utils/response";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { normalizeCloneRequestOptions } from "@cloner/core";
+import { createMhtmlSource, normalizeCloneRequestOptions, type CloneOptions, type CloneSource } from "@cloner/core";
 import type { Backend } from "./backend.js";
 import { createMcpServer } from "./mcp.js";
 import { apiKeyAuth, hashApiKey, rateLimit, type AuthConfig } from "./auth.js";
@@ -87,6 +87,8 @@ export type SignupDeps = {
 
 export type AppDeps = {
   backend: Backend;
+  /** Maximum uploaded MHTML size. Defaults to 25 MiB. */
+  maxMhtmlBytes?: number;
   /** absolute base URL used in MCP-returned references (binary/bundle URLs). */
   baseUrl?: string;
   /** mount the MCP Streamable-HTTP endpoint at /mcp (default true). */
@@ -233,30 +235,62 @@ export function createApp(deps: AppDeps): Hono {
   }
 
   app.post("/v1/clones", async (c) => {
-    const body = await c.req.json().catch(() => null);
-    const parsed = CloneRequest.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: "invalid request", details: parsed.error.flatten() }, 400);
-    }
-    const { url, options } = parsed.data;
-    if (!/^https?:\/\//i.test(url)) {
-      return c.json({ error: "url must be http(s)" }, 400);
-    }
-    // SSRF guard (production): block private/link-local/metadata targets.
-    if (deps.assertUrl) {
-      try {
-        await deps.assertUrl(url);
-      } catch (e) {
-        return c.json({ error: "url not allowed", reason: String((e as Error).message ?? e) }, 400);
+    let source: CloneSource;
+    let options: CloneOptions | undefined;
+    const contentType = c.req.header("content-type") ?? "";
+    if (contentType.toLowerCase().includes("multipart/form-data")) {
+      const form = await c.req.formData().catch(() => null);
+      const file = form?.get("file");
+      if (!file || typeof file === "string") return c.json({ error: "multipart field 'file' is required" }, 400);
+      const maxBytes = deps.maxMhtmlBytes ?? 25 * 1024 * 1024;
+      if (file.size > maxBytes) return c.json({ error: `MHTML file exceeds ${maxBytes} byte limit` }, 413);
+      const rawOptions = form?.get("options");
+      let parsedOptions: unknown = {};
+      if (typeof rawOptions === "string" && rawOptions.trim()) {
+        try {
+          parsedOptions = JSON.parse(rawOptions);
+        } catch {
+          return c.json({ error: "multipart 'options' must be valid JSON" }, 400);
+        }
       }
+      const checkedOptions = OptionsSchema.safeParse(parsedOptions);
+      if (!checkedOptions.success) {
+        return c.json({ error: "invalid options", details: checkedOptions.error.flatten() }, 400);
+      }
+      try {
+        source = createMhtmlSource(Buffer.from(await file.arrayBuffer()), file.name || "snapshot.mhtml");
+      } catch (error) {
+        return c.json({ error: String((error as Error).message ?? error) }, 400);
+      }
+      options = checkedOptions.data;
+    } else {
+      const body = await c.req.json().catch(() => null);
+      const parsed = CloneRequest.safeParse(body);
+      if (!parsed.success) {
+        return c.json({ error: "invalid request", details: parsed.error.flatten() }, 400);
+      }
+      const { url } = parsed.data;
+      options = parsed.data.options;
+      if (!/^https?:\/\//i.test(url)) return c.json({ error: "url must be http(s)" }, 400);
+      if (deps.assertUrl) {
+        try {
+          await deps.assertUrl(url);
+        } catch (e) {
+          return c.json({ error: "url not allowed", reason: String((e as Error).message ?? e) }, 400);
+        }
+      }
+      source = { kind: "url", url };
     }
     // Header alias for the per-request cache bypass.
     const noCacheHeader = (c.req.header("cache-control") ?? "").toLowerCase().includes("no-cache");
     const normalizedOptions = normalizeCloneRequestOptions(options ?? {});
+    if (source.kind === "mhtml" && normalizedOptions.mode === "multi") {
+      return c.json({ error: "MHTML archives are single-page snapshots; use mode=single" }, 400);
+    }
     const opts = noCacheHeader ? { ...normalizedOptions, noCache: true } : normalizedOptions;
 
     try {
-      const out = await backend.submit(url, opts);
+      const out = await backend.submit(source, opts);
       if (out.status === "queued") return c.json({ jobId: out.jobId, status: "queued" }, out.httpStatus);
       return c.json(out.result, 200);
     } catch (e) {
@@ -351,7 +385,7 @@ export function createApp(deps: AppDeps): Hono {
       if (!env?.incoming || !env?.outgoing) {
         return c.json({ error: "MCP requires the Node HTTP server (run via @hono/node-server)" }, 501);
       }
-      const server = createMcpServer(backend, { baseUrl: deps.baseUrl });
+      const server = createMcpServer(backend, { baseUrl: deps.baseUrl, maxMhtmlBytes: deps.maxMhtmlBytes });
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       env.outgoing.on("close", () => {
         transport.close();

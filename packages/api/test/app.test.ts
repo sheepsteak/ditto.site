@@ -22,7 +22,7 @@ const fakeRunJob: RunJob = async (input) => {
   writeFileSync(join(app, "public", "assets", "cloned", "images", "a.png"), png);
   const files = collectFileMap(base);
   return {
-    url: input.url,
+    url: input.source?.kind === "url" ? input.source.url : "https://snapshot.example/page",
     kind: "clone",
     options: input.options ?? {},
     status: "succeeded",
@@ -33,6 +33,10 @@ const fakeRunJob: RunJob = async (input) => {
     runDir: base,
   } satisfies CloneJobResult;
 };
+
+const MHTML_BYTES = Buffer.from(
+  "MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary=ditto\r\nSnapshot-Content-Location: https://snapshot.example/page\r\n\r\n--ditto--\r\n",
+);
 
 async function waitForResult(app: ReturnType<typeof createApp>, jobId: string) {
   for (let i = 0; i < 200; i++) {
@@ -155,6 +159,29 @@ test("POST /v1/clones validates the body", async () => {
       })).status,
       400,
     );
+  } finally {
+    store.clear();
+  }
+});
+
+test("POST /v1/clones accepts an MHTML multipart upload", async () => {
+  const store = new InMemoryStore(60_000);
+  const app = createApp({ backend: new InMemoryBackend({ store, runJob: fakeRunJob }) });
+  try {
+    const form = new FormData();
+    form.set("file", new File([MHTML_BYTES], "page.mhtml", { type: "multipart/related" }));
+    form.set("options", JSON.stringify({ mode: "single", styling: "css" }));
+    const res = await app.request("/v1/clones", { method: "POST", body: form });
+    assert.equal(res.status, 202);
+    const queued = await res.json();
+    const body = await waitForResult(app, queued.jobId);
+    assert.equal(body.url, "https://snapshot.example/page");
+    assert.equal(body.options.mode, "single");
+
+    const invalidMode = new FormData();
+    invalidMode.set("file", new File([MHTML_BYTES], "page.mhtml"));
+    invalidMode.set("options", JSON.stringify({ mode: "multi" }));
+    assert.equal((await app.request("/v1/clones", { method: "POST", body: invalidMode })).status, 400);
   } finally {
     store.clear();
   }

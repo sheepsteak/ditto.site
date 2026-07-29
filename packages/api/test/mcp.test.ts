@@ -18,7 +18,7 @@ const fakeRunJob: RunJob = async (input) => {
   writeFileSync(join(app, "src", "app", "page.tsx"), "export default function Page(){return <div/>}\n");
   writeFileSync(join(app, "public", "assets", "cloned", "images", "a.png"), Buffer.from([1, 2, 3, 4]));
   return {
-    url: input.url,
+    url: input.source?.kind === "url" ? input.source.url : "https://snapshot.example/page",
     kind: "clone",
     options: input.options ?? {},
     status: "succeeded",
@@ -45,7 +45,7 @@ test("MCP: list-then-read + bundle contract (never floods context)", async () =>
   const client = await connect(backend);
   try {
     const tools = (await client.listTools()).tools.map((t) => t.name);
-    for (const n of ["clone_website", "get_clone_status", "get_clone_result", "list_clone_files", "read_clone_files", "get_clone_bundle", "cancel_clone"]) {
+    for (const n of ["clone_website", "clone_mhtml", "get_clone_status", "get_clone_result", "list_clone_files", "read_clone_files", "get_clone_bundle", "cancel_clone"]) {
       assert.ok(tools.includes(n), `tool ${n} registered`);
     }
 
@@ -107,6 +107,38 @@ test("MCP: list-then-read + bundle contract (never floods context)", async () =>
     assert.equal(cancel.cancelled, true);
     const after = parse(await client.callTool({ name: "get_clone_status", arguments: { jobId } }));
     assert.ok(after.error, "status after cancel reports not found");
+  } finally {
+    store.clear();
+  }
+});
+
+test("MCP: clone_mhtml accepts base64 snapshot bytes", async () => {
+  const store = new InMemoryStore(60_000);
+  const backend = new InMemoryBackend({ store, runJob: fakeRunJob });
+  const client = await connect(backend);
+  const mhtml = Buffer.from(
+    "MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary=ditto\r\nSnapshot-Content-Location: https://snapshot.example/page\r\n\r\n--ditto--\r\n",
+  );
+  try {
+    const submitted = parse(await client.callTool({
+      name: "clone_mhtml",
+      arguments: { contentBase64: mhtml.toString("base64"), filename: "page.mhtml", options: { mode: "single" } },
+    }));
+    assert.ok(submitted.jobId);
+    assert.equal(submitted.status, "queued");
+
+    let status: any = {};
+    for (let i = 0; i < 200 && status.status !== "succeeded"; i++) {
+      await new Promise((r) => setTimeout(r, 5));
+      status = parse(await client.callTool({ name: "get_clone_status", arguments: { jobId: submitted.jobId } }));
+    }
+    assert.equal(status.status, "succeeded");
+
+    const invalid = await client.callTool({
+      name: "clone_mhtml",
+      arguments: { contentBase64: mhtml.toString("base64"), filename: "page.mhtml", options: { mode: "multi" } },
+    });
+    assert.equal((invalid as { isError?: boolean }).isError, true);
   } finally {
     store.clear();
   }

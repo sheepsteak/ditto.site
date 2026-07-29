@@ -6,6 +6,9 @@ export const jobs = pgTable("jobs", {
   id: uuid("id").defaultRandom().primaryKey(),
   kind: text("kind").notNull(), // "clone" | "clone_site"
   url: text("url").notNull(),
+  inputKind: text("input_kind").notNull().default("url"), // "url" | "mhtml"
+  inputSha256: text("input_sha256"),
+  inputFilename: text("input_filename"),
   options: jsonb("options").notNull().default({}),
   status: text("status").notNull().default("queued"), // queued|running|succeeded|failed|cached
   cacheKey: text("cache_key").notNull(),

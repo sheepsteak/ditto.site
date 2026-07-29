@@ -11,6 +11,8 @@
 // ---- Single-page clone (capture + generate, no build) ----
 export { runClone, siteIdFromUrl, latestSourceDir } from "./cli.js";
 export type { CloneOptions, CloneResult } from "./cli.js";
+export { normalizeCloneInput, sourceUrlFromMhtml, assertCloneInputMode } from "./input.js";
+export type { NormalizedCloneInput } from "./input.js";
 
 // ---- Multi-page / whole-site clone ----
 export { runCloneSite, regenerateSite } from "./site/cloneSite.js";

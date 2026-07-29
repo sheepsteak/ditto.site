@@ -23,6 +23,7 @@ import { generateSiteApp, routeToSegment, routeKey, type RouteArtifact } from ".
 import { detectSharedChrome, chromeSignatureId } from "./sharedLayout.js";
 import { validateSite, type SiteReport } from "./validateSite.js";
 import { siteIdFromUrl, namedOutDirs, exportApp, writeLatestPointer } from "../cli.js";
+import { assertCloneInputMode, normalizeCloneInput } from "../input.js";
 import { writeJSON, readJSON, ensureDir, fileExists, writeText } from "../util/fsx.js";
 import { seoInventoryToMarkdown } from "../generate/seo.js";
 import type { AppFramework } from "../generate/app.js";
@@ -110,6 +111,7 @@ export function buildSiteLinkTargets(plan: RoutePlan, cmsRoutes: ReadonlySet<str
 }
 
 export async function runCloneSite(opts: CloneSiteOptions): Promise<CloneSiteResult> {
+  assertCloneInputMode(normalizeCloneInput(opts.url), "multi");
   const log = opts.log ?? (() => {});
   const captureConcurrency = Math.max(1, opts.captureConcurrency ?? 3);
   const validate = opts.validate === true;

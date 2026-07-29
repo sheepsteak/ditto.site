@@ -18,7 +18,10 @@ test("ObjectArtifactStore: binaries → blob (presigned URL), text inline, getFi
 
     const blob = new InMemoryBlobClient("https://cdn.test");
     const store = new ObjectArtifactStore(blob);
+    const input = Buffer.from("mhtml-input");
+    await store.putInput("job-1", input);
     const manifest = await store.putClone("job-1", files);
+    assert.deepEqual(await store.getInput("job-1"), input);
 
     const page = manifest.files.find((f) => f.path === "src/app/page.tsx")!;
     assert.equal(page.kind, "text");
@@ -40,6 +43,7 @@ test("ObjectArtifactStore: binaries → blob (presigned URL), text inline, getFi
 
     await store.remove("job-1");
     assert.equal(await store.getFile("job-1", "public/assets/cloned/images/a.png"), null);
+    assert.equal(await store.getInput("job-1"), null);
   } finally {
     rmSync(work, { recursive: true, force: true });
   }

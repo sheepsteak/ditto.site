@@ -16,6 +16,7 @@ npm install
 npx playwright install chromium
 
 npm run clone -- https://example.com/
+npm run clone -- ./saved-page.mhtml
 npm run clone -- https://example.com/ --serve   # then npm install + npm run dev
 npm run clone -- https://example.com/ --open    # ...and open the browser too
 npm run clone -- https://example.com/ --mode=multi --styling=tailwind

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { normalizeCloneRequestOptions } from "@cloner/core";
+import { createMhtmlSource, normalizeCloneRequestOptions } from "@cloner/core";
 import type { Backend } from "./backend.js";
 import { filterMetas, metaOf, paginate, readFiles } from "./files.js";
 
@@ -54,8 +54,9 @@ const json = (data: unknown, isError = false) => ({
  * manifests; the agent pulls only the files it needs (list-then-read), and
  * binaries/bundles are always URLs, never bytes.
  */
-export function createMcpServer(backend: Backend, opts?: { baseUrl?: string }): McpServer {
+export function createMcpServer(backend: Backend, opts?: { baseUrl?: string; maxMhtmlBytes?: number }): McpServer {
   const baseUrl = opts?.baseUrl ?? "";
+  const maxMhtmlBytes = opts?.maxMhtmlBytes ?? 25 * 1024 * 1024;
   const abs = (u: string) => (u.startsWith("/") && baseUrl ? baseUrl + u : u);
   const server = new McpServer({ name: "ditto.site", version: "0.1.0" });
 
@@ -68,8 +69,40 @@ export function createMcpServer(backend: Backend, opts?: { baseUrl?: string }): 
     },
     async ({ url, options }) => {
       if (!/^https?:\/\//i.test(url)) return json({ error: "url must be http(s)" }, true);
-      const out = await backend.submit(url, normalizeCloneRequestOptions(options ?? {}));
+      const out = await backend.submit({ kind: "url", url }, normalizeCloneRequestOptions(options ?? {}));
       return json({ jobId: out.jobId, status: out.status });
+    },
+  );
+
+  server.registerTool(
+    "clone_mhtml",
+    {
+      description: "Clone a single-page MHTML snapshot. Pass exact file bytes as base64. Returns { jobId, status } immediately.",
+      inputSchema: {
+        contentBase64: z.string().min(1),
+        filename: z.string().optional(),
+        options: cloneOptionsSchema.optional(),
+      },
+    },
+    async ({ contentBase64, filename, options }) => {
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(contentBase64) || contentBase64.length % 4 !== 0) {
+        return json({ error: "contentBase64 must be valid base64" }, true);
+      }
+      const bytes = Buffer.from(contentBase64, "base64");
+      if (bytes.length > maxMhtmlBytes) {
+        return json({ error: `MHTML file exceeds ${maxMhtmlBytes} byte limit` }, true);
+      }
+      try {
+        const normalized = normalizeCloneRequestOptions(options ?? {});
+        if (normalized.mode === "multi") {
+          return json({ error: "MHTML archives are single-page snapshots; use mode=single" }, true);
+        }
+        const source = createMhtmlSource(bytes, filename ?? "snapshot.mhtml");
+        const out = await backend.submit(source, normalized);
+        return json({ jobId: out.jobId, status: out.status });
+      } catch (error) {
+        return json({ error: String((error as Error).message ?? error) }, true);
+      }
     },
   );
 

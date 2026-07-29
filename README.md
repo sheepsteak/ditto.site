@@ -67,6 +67,17 @@ curl -sS -X POST "$DITTO_API_URL/v1/clones" \
   }'
 ```
 
+Clone a saved single-page MHTML snapshot with multipart upload:
+
+```bash
+curl -sS -X POST "$DITTO_API_URL/v1/clones" \
+  -H "authorization: Bearer $DITTO_API_KEY" \
+  -F "file=@./saved-page.mhtml;type=multipart/related" \
+  -F 'options={"mode":"single","framework":"next"}'
+```
+
+MHTML inputs support single-page mode only. Uploads default to a 25 MiB limit.
+
 The service returns either a queued job or an inline result. A finished result
 is a file map — every generated file keyed by its app-relative path:
 
@@ -165,6 +176,7 @@ Core MCP tools:
 | Tool | Purpose |
 | --- | --- |
 | `clone_website` | Start a clone and return `{ jobId, status }` |
+| `clone_mhtml` | Start a single-page clone from base64-encoded MHTML bytes |
 | `get_clone_status` | Poll job progress |
 | `get_clone_result` | Read result metadata without file contents |
 | `list_clone_files` | List generated file paths, sizes, and hashes |
@@ -191,6 +203,7 @@ npm ci
 npx playwright install chromium
 
 npm run clone -- https://example.com/ --out=./output
+npm run clone -- ./saved-page.mhtml --out=./output
 ```
 
 The generated app lands under `output/<site>/app`. On success the CLI prints a

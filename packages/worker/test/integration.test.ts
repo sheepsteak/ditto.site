@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type PgBoss from "pg-boss";
-import { collectFileMap, COMPILER_VERSION, type CloneJobResult } from "@cloner/core";
+import { collectFileMap, COMPILER_VERSION, type CloneJobResult, type RunCloneJobInput } from "@cloner/core";
 import { createDb, createBoss, workClone, runMigrations, type Db } from "@cloner/db";
 import { LocalArtifactStore } from "@cloner/storage";
 import { createApp, DbBackend } from "@cloner/api";
@@ -25,7 +25,7 @@ async function waitFor<T>(fn: () => Promise<T | undefined | null>, ms = 30_000, 
 /** A browser-free fake clone: writes a tiny generated app under the worker's temp
  *  base, then returns a real CloneJobResult via collectFileMap. Keeps the queue/DB
  *  lifecycle test fast + hermetic (no Chromium). */
-const fakeRunJob = async (input: { url: string; runsDir?: string; options?: unknown }): Promise<CloneJobResult> => {
+const fakeRunJob = async (input: RunCloneJobInput): Promise<CloneJobResult> => {
   const base = input.runsDir!;
   const app = join(base, "generated", "app");
   mkdirSync(join(app, "src", "app"), { recursive: true });
@@ -34,7 +34,7 @@ const fakeRunJob = async (input: { url: string; runsDir?: string; options?: unkn
   writeFileSync(join(app, "src", "app", "page.tsx"), "export default function Page(){return <div/>}\n");
   writeFileSync(join(app, "public", "assets", "cloned", "images", "a.png"), Buffer.from([1, 2, 3, 4]));
   return {
-    url: input.url,
+    url: input.source?.kind === "url" ? input.source.url : "https://snapshot.example/page",
     kind: "clone",
     options: (input.options as CloneJobResult["options"]) ?? {},
     status: "succeeded",
@@ -119,5 +119,32 @@ describe("M2: async job lifecycle (Postgres queue + DB + worker)", { skip: hasTe
     });
     assert.equal(submit3.status, 202);
     assert.notEqual((await submit3.json()).jobId, jobId);
+  });
+
+  it("persists MHTML input for the worker and caches by content hash", async () => {
+    const app = createApp({ backend: new DbBackend({ db, boss, store }) });
+    const bytes = Buffer.from(
+      `MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary=ditto\r\nSnapshot-Content-Location: https://snapshot.example/${Date.now()}\r\n\r\n--ditto--\r\n`,
+    );
+    const request = () => {
+      const form = new FormData();
+      form.set("file", new File([bytes], "saved.mhtml"));
+      form.set("options", JSON.stringify({ mode: "single" }));
+      return app.request("/v1/clones", { method: "POST", body: form });
+    };
+
+    const submitted = await request();
+    assert.equal(submitted.status, 202);
+    const { jobId } = await submitted.json();
+    const done = await waitFor(async () => {
+      const view = await (await app.request(`/v1/clones/${jobId}`)).json();
+      return view.status === "succeeded" ? view : undefined;
+    });
+    assert.equal(done.capture.nodeCount, 7);
+    assert.deepEqual(await store.getInput(jobId), bytes);
+
+    const cached = await request();
+    assert.equal(cached.status, 200);
+    assert.equal((await cached.json()).jobId, jobId);
   });
 });

@@ -2,6 +2,7 @@ import { isAllowed, parseRobotsDisallow } from "./crawl.js";
 
 export async function assertEntryAllowedByRobots(url: string): Promise<void> {
   const entry = new URL(url);
+  if (entry.protocol !== "http:" && entry.protocol !== "https:") return;
   const origin = entry.origin;
   const pathname = entry.pathname || "/";
 

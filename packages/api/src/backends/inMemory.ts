@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { resolveCloneMode, verifyCloneJobResult, type CloneJobResult, type CloneOptions, type RunCloneJobInput } from "@cloner/core";
+import { cloneSourceLabel, resolveCloneMode, verifyCloneJobResult, type CloneJobResult, type CloneOptions, type CloneSource, type RunCloneJobInput } from "@cloner/core";
 import { makeTarGz, makeZip, sha256hex } from "@cloner/storage";
 import { InMemoryStore } from "../store.js";
 import { buildRestResult, buildRestSummary, contentTypeFor } from "../rest.js";
@@ -23,7 +23,7 @@ export class InMemoryBackend implements Backend {
     return (this.deps.makeTempBase ?? (() => mkdtempSync(join(tmpdir(), "api-clone-"))))();
   }
 
-  async submit(url: string, options: CloneOptions | undefined): Promise<SubmitOutcome> {
+  async submit(source: CloneSource, options: CloneOptions | undefined): Promise<SubmitOutcome> {
     if (this.activeClones > 0 || this.deps.store.list().some((j) => j.status === "running")) {
       throw new Error("BUSY: another clone is already running — wait for it to finish (use npm run dev:api:stable to avoid hot-reload killing Playwright)");
     }
@@ -31,28 +31,30 @@ export class InMemoryBackend implements Backend {
     const base = this.makeBase();
     const events: Array<Record<string, unknown>> = [];
     const kind: "clone" | "clone_site" = resolveCloneMode(options) === "multi" ? "clone_site" : "clone";
+    const url = cloneSourceLabel(source);
     const rec = { id, status: "running" as const, url, kind, options: options ?? {}, createdAt: Date.now(), base, events };
     this.deps.store.put(rec);
-    void this.runInBackground(id, url, options, rec, base, events, kind);
+    void this.runInBackground(id, source, options, rec, base, events, kind);
     return { jobId: id, status: "queued", httpStatus: 202 };
   }
 
   private async runInBackground(
     id: string,
-    url: string,
+    source: CloneSource,
     options: CloneOptions | undefined,
     rec: { id: string; status: "running"; url: string; kind: "clone" | "clone_site"; options: CloneOptions; createdAt: number; base: string; events: Array<Record<string, unknown>> },
     base: string,
     events: Array<Record<string, unknown>>,
     kind: "clone" | "clone_site",
   ): Promise<void> {
+    const url = cloneSourceLabel(source);
     this.activeClones++;
     const log = (e: Record<string, unknown>) => {
       events.push({ t: Date.now(), ...e });
       this.deps.store.put({ ...rec, events: [...events] });
     };
     try {
-      const result = await this.deps.runJob({ url, options, runsDir: base, captureCacheDir: this.deps.captureCacheDir, log });
+      const result = await this.deps.runJob({ source, options, runsDir: base, captureCacheDir: this.deps.captureCacheDir, log });
       log({ event: "clone_done" });
       this.deps.store.put({ id, status: "succeeded", url, kind: result.kind, options: result.options, createdAt: rec.createdAt, result, base, events });
       if (result.options.asyncVerify) {

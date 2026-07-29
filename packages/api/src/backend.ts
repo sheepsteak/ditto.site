@@ -1,4 +1,4 @@
-import type { CloneOptions, RouteInfo } from "@cloner/core";
+import type { CloneOptions, CloneSource, RouteInfo } from "@cloner/core";
 import type { RestCloneResult, RestCloneSummary } from "./rest.js";
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cached";
@@ -46,7 +46,7 @@ export type CloneBundle = { bytes: Buffer; sha256: string; format: BundleFormat;
 /** The HTTP routes talk to this; concrete backends are the in-memory sync runner
  *  (M1) and the DB+queue async backend (M2). */
 export interface Backend {
-  submit(url: string, options: CloneOptions | undefined): Promise<SubmitOutcome>;
+  submit(source: CloneSource, options: CloneOptions | undefined): Promise<SubmitOutcome>;
   status(jobId: string): Promise<JobView | null>;
   result(jobId: string): Promise<ResultOutcome | null>;
   file(jobId: string, path: string): Promise<{ bytes: Buffer; contentType: string } | null>;

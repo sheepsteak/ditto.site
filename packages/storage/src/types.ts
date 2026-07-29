@@ -15,6 +15,9 @@ export type StoredManifest = {
 /** Blob backend for clone artifacts. LocalArtifactStore (M2) writes to disk;
  *  S3ArtifactStore (M4) uploads to S3/R2 and presigns URLs. */
 export interface ArtifactStore {
+  /** Persist/read an uploaded MHTML source used by a queued worker. */
+  putInput(jobId: string, bytes: Buffer): Promise<void>;
+  getInput(jobId: string): Promise<Buffer | null>;
   /** Persist a clone's files; returns the manifest (text inline, binaries by key). */
   putClone(jobId: string, files: FileMap): Promise<StoredManifest>;
   /** Read one file's bytes (for the API's /files/* streaming). null if absent. */

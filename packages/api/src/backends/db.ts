@@ -1,4 +1,4 @@
-import { cacheKey, COMPILER_VERSION, resolveCloneMode, type CloneOptions, type RouteInfo } from "@cloner/core";
+import { cacheKey, cloneSourceLabel, COMPILER_VERSION, resolveCloneMode, type CloneOptions, type CloneSource, type RouteInfo } from "@cloner/core";
 import { repo, enqueueClone, type Db, type PgBoss } from "@cloner/db";
 import { makeTarGz, makeZip, sha256hex, type ArtifactStore, type StoredFile } from "@cloner/storage";
 import type { Backend, BundleFormat, CloneBundle, FileFacet, JobView, JobStatus, ResultOutcome, SubmitOutcome } from "../backend.js";
@@ -13,9 +13,13 @@ export type StoredEnvelope = { files: StoredFile[]; routes?: RouteInfo[]; bundle
 export class DbBackend implements Backend {
   constructor(private deps: { db: Db; boss: PgBoss; store: ArtifactStore }) {}
 
-  async submit(url: string, options: CloneOptions | undefined): Promise<SubmitOutcome> {
-    const key = cacheKey(url, options, COMPILER_VERSION);
+  async submit(source: CloneSource, options: CloneOptions | undefined): Promise<SubmitOutcome> {
+    const key = cacheKey(source, options, COMPILER_VERSION);
     const kind: "clone" | "clone_site" = resolveCloneMode(options) === "multi" ? "clone_site" : "clone";
+    if (source.kind === "mhtml" && kind === "clone_site") {
+      throw new Error("MHTML archives are single-page snapshots; use mode=single");
+    }
+    const url = cloneSourceLabel(source);
 
     if (!options?.noCache) {
       const hit = await repo.cacheGetFresh(this.deps.db, key, COMPILER_VERSION);
@@ -34,7 +38,24 @@ export class DbBackend implements Backend {
       }
     }
 
-    const job = await repo.createJob(this.deps.db, { kind, url, options: options ?? {}, status: "queued", cacheKey: key });
+    const job = await repo.createJob(this.deps.db, {
+      kind,
+      url,
+      inputKind: source.kind,
+      inputSha256: source.kind === "mhtml" ? source.sha256 : null,
+      inputFilename: source.kind === "mhtml" ? source.filename : null,
+      options: options ?? {},
+      status: "queued",
+      cacheKey: key,
+    });
+    if (source.kind === "mhtml") {
+      try {
+        await this.deps.store.putInput(job.id, source.content);
+      } catch (error) {
+        await repo.deleteJob(this.deps.db, job.id);
+        throw error;
+      }
+    }
     await enqueueClone(this.deps.boss, job.id);
     return { jobId: job.id, status: "queued", httpStatus: 202 };
   }
@@ -44,7 +65,7 @@ export class DbBackend implements Backend {
     if (!job) return null;
     const base: JobView = {
       jobId: job.id,
-      url: job.url,
+      url: clone.url,
       kind: job.kind as "clone" | "clone_site",
       status: job.status as JobStatus,
       options: job.options as CloneOptions,

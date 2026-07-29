@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import type { CloneOptions } from "./types.js";
+import type { CloneOptions, CloneSource } from "./types.js";
 import { resolveCloneOptions } from "./options.js";
+import { cloneSourceIdentity } from "./source.js";
 
 /** Normalize a URL so trivially-different spellings of the same page share a cache
  *  entry: lowercase scheme+host, drop default ports, drop the fragment, collapse a
@@ -58,7 +59,12 @@ export function canonicalOptions(options: CloneOptions = {}): string {
  *  A compilerVersion bump invalidates everything (the output changed). The cache is
  *  freshness-bounded by the caller (CACHE_STALE_AFTER), because two *captures* of a
  *  live site can differ even though generation from one capture is byte-stable. */
-export function cacheKey(url: string, options: CloneOptions | undefined, compilerVersion: string): string {
-  const payload = [normalizeUrl(url), canonicalOptions(options), compilerVersion].join("\n");
+export function cacheKey(source: string | CloneSource, options: CloneOptions | undefined, compilerVersion: string): string {
+  const identity = typeof source === "string"
+    ? `url:${normalizeUrl(source)}`
+    : source.kind === "url"
+      ? `url:${normalizeUrl(source.url)}`
+      : cloneSourceIdentity(source);
+  const payload = [identity, canonicalOptions(options), compilerVersion].join("\n");
   return createHash("sha256").update(payload).digest("hex");
 }

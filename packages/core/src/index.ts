@@ -5,6 +5,7 @@
 export { runCloneJob, verifyCloneJobResult } from "./runCloneJob.js";
 export { collectFileMap, fileMapStats } from "./collectFileMap.js";
 export { cacheKey, normalizeUrl, canonicalOptions } from "./cacheKey.js";
+export { createMhtmlSource, cloneSourceIdentity, cloneSourceLabel } from "./source.js";
 export {
   normalizeCloneRequestOptions,
   resolveCloneMode,
@@ -14,6 +15,7 @@ export {
 export { COMPILER_VERSION } from "clone-static";
 export type {
   CloneMode,
+  CloneSource,
   CloneOptions,
   CloneStyling,
   ExperimentalContentHandoff,

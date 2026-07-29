@@ -1072,7 +1072,9 @@ export async function normalizeVideoTime(
 }
 
 export async function captureSite(opts: {
-  url: string;
+  url: string; // semantic source URL used by generation
+  navigationUrl?: string; // browser target; differs for local MHTML
+  offline?: boolean; // frozen snapshot: skip live-origin side fetches
   outDir: string; // source/ directory
   viewports?: number[];
   interactions?: boolean; // Stage 4: opt-in interaction capture (hover/focus + patterns)
@@ -1115,7 +1117,9 @@ export async function captureSite(opts: {
   const fontFaceMap = new Map<string, FontFace>();
   const seoResourceUrls = new Map<string, SeoResource["kind"]>();
 
+  const navigationUrl = opts.navigationUrl ?? opts.url;
   const sourceOrigin = (() => {
+    if (opts.offline) return "";
     try {
       const u = new URL(opts.url);
       return u.protocol === "http:" || u.protocol === "https:" ? u.origin : "";
@@ -1229,7 +1233,7 @@ export async function captureSite(opts: {
   // gate, so this never affects generated output.
   let proxyServer = process.env.HTTPS_PROXY || process.env.https_proxy || "";
   try {
-    const u = new URL(opts.url);
+    const u = new URL(navigationUrl);
     // Skip the proxy ONLY for a localhost http(s) target (test fixtures, the validator's
     // static server) — Playwright otherwise routes loopback through the proxy and replaces
     // the page with the proxy error page. file:// keeps the proxy on so any REMOTE assets
@@ -1277,7 +1281,15 @@ export async function captureSite(opts: {
           const url = resp.url();
           if (url.startsWith("data:") || url.startsWith("blob:")) return;
           const ct = resp.headers()["content-type"] || null;
-          const type = classifyAsset(url, ct);
+          let type = classifyAsset(url, ct);
+          if (!type && url.startsWith("cid:")) {
+            const resourceType = resp.request().resourceType();
+            type = resourceType === "stylesheet" ? "css"
+              : resourceType === "font" ? "font"
+              : resourceType === "media" ? "video"
+              : resourceType === "image" ? "image"
+              : "other";
+          }
           if (!type) return;
           const status = resp.status();
           recordAsset(url, type, ct, status, "network");
@@ -1340,7 +1352,7 @@ export async function captureSite(opts: {
     // later attempts fall back to `domcontentloaded` (a heavy page may never fire `load`).
     const NAV_BUDGET_MS = 90_000;
     const navigateLoaded = async (pg: import("playwright").Page): Promise<Response | null> => {
-      log({ event: "goto", url: opts.url });
+      log({ event: "goto", url: navigationUrl, sourceUrl: opts.url });
       const navStart = Date.now();
       let navigated = false;
       let response: Response | null = null;
@@ -1349,7 +1361,7 @@ export async function captureSite(opts: {
         const remaining = NAV_BUDGET_MS - (Date.now() - navStart);
         if (remaining < 5_000) break; // not enough budget left for a meaningful attempt
         try {
-          response = await pg.goto(opts.url, {
+          response = await pg.goto(navigationUrl, {
             waitUntil: attempt === 0 ? "load" : "domcontentloaded",
             timeout: Math.min(attempt === 0 ? 45_000 : 20_000, remaining),
           });
@@ -1361,7 +1373,7 @@ export async function captureSite(opts: {
       }
       if (!navigated) {
         throw new Error(
-          `navigation failed for ${opts.url} within ${Math.round((Date.now() - navStart) / 1000)}s: ${String((navErr as { message?: string })?.message ?? navErr).slice(0, 300)}`,
+          `navigation failed for ${navigationUrl} within ${Math.round((Date.now() - navStart) / 1000)}s: ${String((navErr as { message?: string })?.message ?? navErr).slice(0, 300)}`,
         );
       }
       await settle(pg);
@@ -1384,6 +1396,16 @@ export async function captureSite(opts: {
       entryResponse = await navigateLoaded(page); // second failure propagates (no further retry)
     }
 
+    if (opts.offline) {
+      await page.evaluate((sourceUrl) => {
+        if (document.baseURI.startsWith("file:") && document.head) {
+          const base = document.createElement("base");
+          base.href = sourceUrl;
+          document.head.prepend(base);
+        }
+      }, opts.url);
+    }
+
     // Item 3b: bot/auth-wall fast-fail. A wall page would otherwise burn the full
     // multi-viewport capture and only get flagged by the pollution gate afterward.
     // Uses the SAME signatures + node-count threshold as the gate (util/captureFailure.ts)
@@ -1397,7 +1419,9 @@ export async function captureSite(opts: {
       .catch(() => null);
     const entryStatus = entryResponse?.status() ?? null;
     const wallDetected = isBotWall(wallProbe);
-    if (entryStatus === 403 || entryStatus === 429 || wallDetected) throw blockedAccessError(opts.url, entryStatus, wallDetected);
+    if ((!opts.offline && (entryStatus === 403 || entryStatus === 429)) || wallDetected) {
+      throw blockedAccessError(opts.url, entryStatus, wallDetected);
+    }
 
     // Stage 2: lazy-loader promotion. WP Rocket/lazysizes keep a 0-size placeholder in
     // `src` with the real URL in data attrs; autoScroll outruns their IntersectionObserver
@@ -1704,6 +1728,7 @@ export async function captureSite(opts: {
         page.evaluate(collectPage),
         new Promise<never>((_, rej) => setTimeout(() => rej(new Error(`collectPage timeout vp${vw}`)), 60_000)),
       ]);
+      snapshot.doc.url = opts.url;
 
       // Graft the captured frame subtrees into this viewport's snapshot (offset bboxes,
       // namespaced ids, frame-URL-absolutized src/href — see graft.ts).
@@ -1869,6 +1894,7 @@ export async function captureSite(opts: {
     for (const a of assetMap.values()) {
       if (a.storedAs) continue;
       if (a.url.startsWith("data:")) continue;
+      if (a.url.startsWith("cid:")) continue;
       if (!["image", "svg", "video", "font", "lottie", "css", "manifest"].includes(a.type)) continue;
       // One bounded retry for transiently-failed VISUAL assets (network error / 5xx / 429):
       // a single flaky fetch otherwise degrades an image to the transparent-GIF placeholder.

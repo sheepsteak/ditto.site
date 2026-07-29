@@ -68,6 +68,7 @@ async function main(): Promise<void> {
   const app = createApp({
     backend,
     baseUrl: env.publicBaseUrl,
+    maxMhtmlBytes: env.maxMhtmlBytes,
     auth,
     rateLimitPerMinute: env.rateLimitPerMinute,
     signupCorsOrigins: env.signupCorsOrigins,

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, cpSync, existsSync, mkdirSync, statSync } from "node:fs";
+import { mkdtempSync, rmSync, cpSync, existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -68,14 +68,20 @@ function persistCapture(srcDir: string | undefined, dest: string): void {
  * route (skips re-capturing page 1) and regenerates the whole site on top of it.
  */
 export async function runCloneJob(input: RunCloneJobInput): Promise<CloneJobResult> {
+  const source = input.source ?? (input.url ? { kind: "url" as const, url: input.url } : null);
+  if (!source) throw new Error("clone source is required");
   const requestOptions: CloneOptions = normalizeCloneRequestOptions(input.options ?? {});
   const options = resolveCloneOptions(requestOptions);
   const syncVerify = !!options.verify && !options.asyncVerify;
   const captureValidationArtifacts = !!(options.verify || options.asyncVerify);
   const log = input.log ?? (() => {});
+  const kind: "clone" | "clone_site" = options.mode === "multi" ? "clone_site" : "clone";
+  if (source.kind === "mhtml" && kind === "clone_site") {
+    throw new Error("MHTML archives are single-page snapshots; use mode=single");
+  }
   const ownsTemp = !input.runsDir;
   const runsDir = input.runsDir ?? mkdtempSync(join(tmpdir(), "clone-job-"));
-  const kind: "clone" | "clone_site" = options.mode === "multi" ? "clone_site" : "clone";
+  let target = source.kind === "url" ? source.url : "";
 
   // Best-by-default (matches the CLI): interactions/components/motion ON unless the
   // caller explicitly disables them. (runClone itself defaults them OFF; the CLI is
@@ -85,20 +91,27 @@ export async function runCloneJob(input: RunCloneJobInput): Promise<CloneJobResu
   const motion = options.motion;
 
   try {
+    if (source.kind === "mhtml") {
+      const inputDir = join(runsDir, ".input");
+      mkdirSync(inputDir, { recursive: true });
+      target = join(inputDir, source.filename);
+      writeFileSync(target, source.content);
+    }
     const t0 = Date.now();
     let runDir: string;
     let routes: RouteInfo[] | undefined;
     let sanity: CaptureSanity;
     let captureReused = false;
     // Persistent entry-capture cache (the single→multi speed path), keyed by URL.
-    const cacheEntry = input.captureCacheDir ? entryCacheSource(input.captureCacheDir, input.url) : undefined;
+    const cacheEntry = source.kind === "url" && input.captureCacheDir ? entryCacheSource(input.captureCacheDir, source.url) : undefined;
+    let resultUrl = source.kind === "url" ? source.url : target;
 
     if (kind === "clone_site") {
       // Reuse a prior single-page capture for the entry route when the cache holds a fresh one.
       const reuseEntrySource = cacheEntry && freshCapture(cacheEntry, input.captureCacheTtlMs) ? cacheEntry : undefined;
       captureReused = !!reuseEntrySource;
       const res: CloneSiteResult = await runCloneSite({
-        url: input.url,
+        url: target,
         runsDir,
         validate: false,
         interactions,
@@ -135,7 +148,7 @@ export async function runCloneJob(input: RunCloneJobInput): Promise<CloneJobResu
       if (cacheEntry && entry) persistCapture(entry.sourceDir, cacheEntry);
     } else {
       const res: CompilerCloneResult = await runClone({
-        url: input.url,
+        url: target,
         runsDir,
         viewports: options.viewports,
         interactions,
@@ -148,6 +161,7 @@ export async function runCloneJob(input: RunCloneJobInput): Promise<CloneJobResu
         log,
       });
       runDir = res.runDir;
+      resultUrl = res.sourceUrl;
       sanity = captureSanity(res.sourceDir, options.viewports ?? [375, 768, 1280, 1920]);
       // Stash this page's capture so a later multi-page job can expand on it (speed path).
       if (cacheEntry) persistCapture(res.sourceDir, cacheEntry);
@@ -167,7 +181,7 @@ export async function runCloneJob(input: RunCloneJobInput): Promise<CloneJobResu
     const files = collectFileMap(runDir);
 
     return {
-      url: input.url,
+      url: resultUrl,
       kind,
       options: requestOptions,
       status: "succeeded",

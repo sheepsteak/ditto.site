@@ -9,6 +9,7 @@ import { writeJSON, writeText, ensureDir, readJSON, fileExists } from "./util/fs
 import { doneSummary, serveApp } from "./cliSummary.js";
 import type { AppFramework } from "./generate/app.js";
 import { assertEntryAllowedByRobots } from "./crawl/robotsGuard.js";
+import { assertCloneInputMode, normalizeCloneInput } from "./input.js";
 
 export type CloneOptions = {
   url: string;
@@ -414,6 +415,7 @@ function rewriteRuntimeAnchorQueries(text: string, fileName: string): string {
 
 /** Run the deterministic compiler end-to-end. Capture is skippable via reuseSource. */
 export async function runClone(opts: CloneOptions): Promise<CloneResult> {
+  const input = normalizeCloneInput(opts.url);
   // The size-inference SAMPLE set. Defaults to the standard 4 (band) widths; pass `--dense` to
   // also capture intermediate/wide widths (SAMPLE_VIEWPORTS) — the IR feeds those to width
   // inference while still emitting bands only at the standard breakpoints. NOTE: dense capture
@@ -424,9 +426,9 @@ export async function runClone(opts: CloneOptions): Promise<CloneResult> {
   const viewports = opts.viewports ?? [...REQUIRED_VIEWPORTS];
   const log = opts.log ?? (() => {});
   const runsDir = opts.runsDir ?? resolve(process.cwd(), "..", "runs");
-  const siteId = siteIdFromUrl(opts.url);
+  const siteId = siteIdFromUrl(input.sourceUrl);
   // --out: predictable <outDir>/<siteName>/.clone working dir + app/ deliverable.
-  const out = opts.outDir ? namedOutDirs(opts.outDir, opts.url) : null;
+  const out = opts.outDir ? namedOutDirs(opts.outDir, input.sourceUrl) : null;
   const runDir = out ? out.runDir : join(runsDir, siteId, timestamp());
   const sourceDir = join(runDir, "source");
   const generatedDir = join(runDir, "generated");
@@ -437,10 +439,19 @@ export async function runClone(opts: CloneOptions): Promise<CloneResult> {
   const logEvents: Record<string, unknown>[] = [];
   const logBoth = (e: Record<string, unknown>) => { logEvents.push(e); log(e); };
 
-  writeJSON(join(runDir, "input.json"), { url: opts.url, siteId, viewports, sampleViewports: captureViewports, startedAt: new Date().toISOString() });
+  writeJSON(join(runDir, "input.json"), {
+    url: input.sourceUrl,
+    input: input.kind === "mhtml"
+      ? { kind: input.kind, raw: input.raw, navigationUrl: input.navigationUrl, localPath: input.localPath }
+      : { kind: input.kind, raw: input.raw, navigationUrl: input.navigationUrl },
+    siteId,
+    viewports,
+    sampleViewports: captureViewports,
+    startedAt: new Date().toISOString(),
+  });
 
   // 1. Capture (or reuse)
-  if (opts.respectRobots ?? true) await assertEntryAllowedByRobots(opts.url);
+  if (input.kind === "url" && (opts.respectRobots ?? true)) await assertEntryAllowedByRobots(input.sourceUrl);
   let capture: CaptureResult;
   if (opts.reuseSource && fileExists(join(opts.reuseSource, "capture", "capture-result.json"))) {
     logBoth({ event: "capture_reuse", from: opts.reuseSource });
@@ -449,7 +460,17 @@ export async function runClone(opts: CloneOptions): Promise<CloneResult> {
     // For simplicity the IR is built from reuseSource and other artifacts written into runDir.
     copySourceRef(opts.reuseSource, sourceDir);
   } else {
-    capture = await captureSite({ url: opts.url, outDir: sourceDir, viewports: captureViewports, interactions: opts.interactions, motion: opts.motion, screenshots: opts.screenshots, log: logBoth });
+    capture = await captureSite({
+      url: input.sourceUrl,
+      navigationUrl: input.navigationUrl,
+      offline: input.kind === "mhtml",
+      outDir: sourceDir,
+      viewports: captureViewports,
+      interactions: opts.interactions,
+      motion: opts.motion,
+      screenshots: opts.screenshots,
+      log: logBoth,
+    });
   }
 
   // Stage 4.5: persist the component-extraction choice in the source dir so every
@@ -458,7 +479,7 @@ export async function runClone(opts: CloneOptions): Promise<CloneResult> {
   writeJSON(join(sourceDir, "clone-options.json"), { components: !!opts.components, ...(opts.humanizeMode ? { humanizeMode: opts.humanizeMode } : {}), ...(opts.framework ? { framework: opts.framework } : {}), reflow: !!opts.reflow });
 
   // 2-5. Normalize → infer → generate → emit (shared deterministic pipeline)
-  const gen = generateAll({ sourceDir, capture, viewports, sampleViewports: captureViewports, url: opts.url, outDir: generatedDir });
+  const gen = generateAll({ sourceDir, capture, viewports, sampleViewports: captureViewports, url: input.sourceUrl, outDir: generatedDir });
   logBoth({ event: "ir_built", nodes: gen.ir.doc.nodeCount });
   logBoth({ event: "inferred", sections: gen.sections.length, assets: gen.assetGraph.entries.length, fonts: gen.fontGraph.entries.length });
   const visualAssetsMissing = gen.assetGraph.entries.filter((e) => e.impact === "visual_missing").length;
@@ -486,7 +507,7 @@ export async function runClone(opts: CloneOptions): Promise<CloneResult> {
     stableAppDir = writeLatestPointer(runsDir, siteId, runDir);
   }
 
-  return { runDir, sourceDir, appDir: out ? out.appDir : appDir, sourceUrl: opts.url, stableAppDir, visualAssetsMissing };
+  return { runDir, sourceDir, appDir: out ? out.appDir : appDir, sourceUrl: input.sourceUrl, stableAppDir, visualAssetsMissing };
 }
 
 /** Record the newest run for a site in the runs layout: a `latest.json` breadcrumb (used by
@@ -581,10 +602,12 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const url = args.find((a) => !a.startsWith("--"));
   if (!url) {
-    console.error("usage: clone-static <url> [--mode=single|multi] [--styling=tailwind|css] [--framework=next|vite] [--out=<dir>] [--serve] [--open]");
+    console.error("usage: clone-static <url|file.mhtml> [--mode=single|multi] [--styling=tailwind|css] [--framework=next|vite] [--out=<dir>] [--serve] [--open]");
     process.exit(1);
   }
   const mode = parseProductMode(args);
+  const input = normalizeCloneInput(url);
+  assertCloneInputMode(input, mode);
   const styling = parseProductStyling(args);
   const framework = parseProductFramework(args);
   const experimentalContentHandoff = parseExperimentalContentHandoff(args);
@@ -628,7 +651,7 @@ async function main(): Promise<void> {
   const respectRobots = !hasAnyFlag(args, ["--dev-no-respect-robots", "--no-respect-robots"]);
   const runsDir = runsArg ? resolve(runsArg) : resolve(process.cwd(), "..", "runs");
   // --reuse: regenerate from the latest existing capture (skip the browser pass).
-  const reuseSource = hasAnyFlag(args, ["--dev-reuse", "--reuse"]) ? latestSourceDir(runsDir, url) ?? undefined : undefined;
+  const reuseSource = hasAnyFlag(args, ["--dev-reuse", "--reuse"]) ? latestSourceDir(runsDir, input.sourceUrl) ?? undefined : undefined;
 
   if (mode === "multi") {
     const { runCloneSite } = await import("./site/cloneSite.js");

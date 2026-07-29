@@ -12,6 +12,10 @@ export type CloneStyling = "tailwind" | "css";
 export type CloneFramework = "next" | "vite";
 export type ExperimentalContentHandoff = "ion-cms-v1";
 
+export type CloneSource =
+  | { kind: "url"; url: string }
+  | { kind: "mhtml"; content: Buffer; filename: string; sha256: string };
+
 /** Clone options accepted by the service/core boundary.
  *
  * Normal callers should use only the product choices:
@@ -110,7 +114,9 @@ export type CloneJobResult = {
 };
 
 export type RunCloneJobInput = {
-  url: string;
+  /** Preferred source contract. `url` remains accepted for internal backwards compatibility. */
+  source?: CloneSource;
+  url?: string;
   options?: CloneOptions;
   /** override the temp base dir (tests). When set, the dir is NOT auto-removed. */
   runsDir?: string;

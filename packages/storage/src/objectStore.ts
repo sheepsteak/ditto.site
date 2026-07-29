@@ -24,6 +24,14 @@ export class ObjectArtifactStore implements ArtifactStore {
     return `clones/${jobId}/${path}`;
   }
 
+  async putInput(jobId: string, bytes: Buffer): Promise<void> {
+    await this.blob.put(this.key(jobId, "_input/source.mhtml"), bytes, "application/x-mimearchive");
+  }
+
+  async getInput(jobId: string): Promise<Buffer | null> {
+    return this.blob.get(this.key(jobId, "_input/source.mhtml"));
+  }
+
   async putClone(jobId: string, files: FileMap): Promise<StoredManifest> {
     const out: StoredFile[] = [];
     for (const [path, f] of Object.entries(files)) {
