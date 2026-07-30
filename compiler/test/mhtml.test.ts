@@ -76,10 +76,12 @@ describe("MHTML clone input", () => {
       viewports: [1280],
       breakpoints: false,
       interactions: false,
-      motion: false,
+      motion: true,
       screenshots: false,
     });
     assert.equal(capture.sourceUrl, SOURCE_URL);
+    assert.deepEqual(capture.motion?.rotators, [], "offline motion capture completes without suspended page timers");
+    assert.deepEqual(capture.motion?.marquees, [], "offline JS marquee sampling is skipped");
     const image = capture.assets.find((asset) => asset.url.startsWith("cid:image@ditto"));
     assert.ok(image, "embedded image discovered");
     assert.ok(image.storedAs, "embedded image bytes stored");

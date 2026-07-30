@@ -162,12 +162,12 @@ export async function captureLotties(
               push({ container, via: "registry", src, inlineKey, renderer: rendererType, loop: a.loop, autoplay: a.autoplay });
             }
           };
+          readRegistry();
           const deadline = Date.now() + budget;
-          do {
-            readRegistry();
-            if (out.length) break; // got something from the registry; static scans below still run once
+          while (!out.length && Date.now() < deadline) {
             await sleep(200);
-          } while (Date.now() < deadline);
+            readRegistry();
+          }
 
           // ---- 2. <lottie-player> / <dotlottie-player> web components ----
           document.querySelectorAll("lottie-player, dotlottie-player").forEach((el) => {

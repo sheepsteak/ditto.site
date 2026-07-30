@@ -425,12 +425,13 @@ async function detectScrubReveals(page: Page): Promise<RevealSpec[]> {
   } catch { return []; }
 }
 
-export async function captureMotion(page: Page, opts?: { observeMs?: number; log?: (e: Record<string, unknown>) => void }): Promise<MotionCapture> {
+export async function captureMotion(page: Page, opts?: { observeMs?: number; offline?: boolean; log?: (e: Record<string, unknown>) => void }): Promise<MotionCapture> {
   const log = opts?.log ?? (() => {});
   const observeMs = opts?.observeMs ?? 2600;
+  const offline = opts?.offline ?? false;
   try {
     const result = await Promise.race([
-      page.evaluate(async (budget: number) => {
+      page.evaluate(async ({ budget, observe }: { budget: number; observe: boolean }) => {
         const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
         // ---- WAAPI: pure script-driven animations (exclude CSS animations/transitions,
@@ -494,9 +495,15 @@ export async function captureMotion(page: Page, opts?: { observeMs?: number; log
             changes.set(cap, e);
           }
         });
-        obs.observe(document.body, { subtree: true, childList: true, characterData: true });
-        await sleep(budget);
-        obs.disconnect();
+        // Chromium intentionally suspends document timers for loaded MHTML archives.
+        // Dynamic page-script motion cannot advance there, so do not wait on an in-page
+        // timer that will never fire. The synchronous WAAPI/reveal/CSS reads below still
+        // run, while declarative CSS motion remains owned by the IR/generator path.
+        if (observe) {
+          obs.observe(document.body, { subtree: true, childList: true, characterData: true });
+          await sleep(budget);
+          obs.disconnect();
+        }
 
         const rotators: Array<{ cap: string; texts: string[]; intervalMs: number }> = [];
         for (const [cap, e] of changes) {
@@ -559,21 +566,24 @@ export async function captureMotion(page: Page, opts?: { observeMs?: number; log
         }
 
         return { waapi, rotators, reveals, cssAnimated };
-      }, observeMs),
+      }, { budget: observeMs, observe: !offline }),
       new Promise<Omit<MotionCapture, "marquees" | "lotties" | "lottieInline">>((res) => setTimeout(() => res({ waapi: [], rotators: [], reveals: [], cssAnimated: 0 }), observeMs + 4000)),
     ]);
     // Scroll-scrub reveals: scroll-linked panels probeReveals can't see (they start only
     // partially hidden). Merge into reveals, preferring the probe-confirmed entry when a cap
     // appears in both.
-    const scrubReveals = await detectScrubReveals(page);
+    // MHTML suspends page timers and page JavaScript cannot drive these JS-only effects.
+    // Skipping the active probes is both faithful and bounded; CSS animations are captured
+    // declaratively, and the synchronous reveal confirmation above still runs.
+    const scrubReveals = offline ? [] : await detectScrubReveals(page);
     const reveals = [...result.reveals];
     const haveCap = new Set(reveals.map((r) => r.cap));
     for (const s of scrubReveals) if (!haveCap.has(s.cap)) { reveals.push(s); haveCap.add(s.cap); }
     // Marquees run as a separate pass (scrolls each track into view to wake the paused
     // rAF ticker; kept after the rotator MutationObserver window so it can't add false text rotators).
-    const marquees = await detectMarquees(page);
+    const marquees = offline ? [] : await detectMarquees(page);
     // Lottie: third-party JSON animations, captured separately (registry + static markup scan).
-    const lottie = await captureLotties(page, { log });
+    const lottie = await captureLotties(page, { log, ...(offline ? { budgetMs: 0 } : {}) });
     log({ event: "motion_captured", waapi: result.waapi.length, rotators: result.rotators.length, reveals: reveals.length, marquees: marquees.length, lotties: lottie.lotties.length, cssAnimated: result.cssAnimated });
     return { ...result, reveals, marquees, lotties: lottie.lotties, lottieInline: lottie.inline };
   } catch (e) {

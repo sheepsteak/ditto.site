@@ -1822,7 +1822,7 @@ export async function captureSite(opts: {
 
       // Stage 5: capture motion (WAAPI + rotating text) at the canonical viewport.
       if (opts.motion && vw === canonical) {
-        try { motion = await captureMotion(page, { log }); }
+        try { motion = await captureMotion(page, { log, offline: opts.offline }); }
         catch (e) { log({ event: "motion_error", error: String(e).slice(0, 200) }); }
         // Register lottie source JSONs as assets so the asset stage downloads + materializes
         // them (the in-page detector only records the URL; the fallback fetch grabs the file).
