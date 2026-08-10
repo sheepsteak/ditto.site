@@ -8,6 +8,8 @@ No HTTP API, database, queue, worker, or compiler CLI child.
 Source stays as TypeScript and runs through Node's native type stripping. Node
 22.6 or newer is required; Node 22 uses `--experimental-strip-types` (included
 in the scripts/shebang). No transpile/build step or TypeScript loader is used.
+Vendor or extract this package into the agent workspace. Node 22 intentionally
+does not strip TypeScript located under `node_modules`.
 
 ## Install and run
 
@@ -24,7 +26,7 @@ npm start
       "command": "node",
       "args": [
         "--experimental-strip-types",
-        "/absolute/path/to/package/bin/ditto-mcp.ts"
+        "/absolute/path/to/package/src/stdio.ts"
       ],
       "env": {
         "DITTO_MCP_INPUT_ROOT": "/workspace",

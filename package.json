@@ -5,20 +5,16 @@
   "description": "Self-contained ephemeral STDIO MCP website compiler.",
   "license": "MIT",
   "type": "module",
-  "bin": {
-    "ditto-mcp-stdio": "./bin/ditto-mcp.ts"
-  },
   "exports": {
     ".": "./src/index.ts"
   },
   "files": [
-    "bin",
     "src",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
-    "start": "node --experimental-strip-types bin/ditto-mcp.ts",
+    "start": "node --experimental-strip-types src/stdio.ts",
     "install-browser": "playwright install chromium",
     "test": "npm run test:unit && npm run test:compiler && npm run test:integration",
     "test:unit": "node --experimental-strip-types --test test/*.unit.test.ts",

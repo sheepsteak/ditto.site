@@ -43,7 +43,7 @@ test("packaged launcher speaks clean STDIO MCP", async () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "..");
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: ["--experimental-strip-types", join(root, "bin/ditto-mcp.ts")],
+    args: ["--experimental-strip-types", join(root, "src", "stdio.ts")],
     cwd: root,
     env: { ...process.env, DITTO_MCP_INPUT_ROOT: root, DITTO_MCP_OUTPUT_ROOT: root }, stderr: "ignore",
   });

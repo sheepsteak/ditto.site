@@ -1,6 +1,6 @@
 #!/usr/bin/env -S node --experimental-strip-types
 
-import { main } from "../src/server.ts";
+import { main } from "./server.ts";
 
 try {
   await main();
