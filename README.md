@@ -5,18 +5,23 @@ Self-contained STDIO MCP server with an embedded deterministic website compiler.
 capture/generation finishes, and returns the generated app path and summary.
 
 No HTTP API, database, queue, worker, or compiler CLI child.
-Source stays as TypeScript and runs through Node's native type stripping. Node
-22.6 or newer is required; Node 22 uses `--experimental-strip-types` (included
-in the scripts/shebang). No transpile/build step or TypeScript loader is used.
-Vendor or extract this package into the agent workspace. Node 22 intentionally
-does not strip TypeScript located under `node_modules`.
+Source stays as TypeScript. Production builds transpile ESM, declarations, and
+source maps into `dist`; runtime uses plain Node with no TypeScript loader.
+Development runs source directly through `tsx`.
 
 ## Install and run
 
 ```bash
 npm ci
 npm run install-browser
+npm run build
 npm start
+```
+
+For development:
+
+```bash
+npm run dev
 ```
 
 ```json
@@ -24,10 +29,7 @@ npm start
   "mcpServers": {
     "ditto-local": {
       "command": "node",
-      "args": [
-        "--experimental-strip-types",
-        "/absolute/path/to/package/src/stdio.ts"
-      ],
+      "args": ["/absolute/path/to/package/dist/stdio.js"],
       "env": {
         "DITTO_MCP_INPUT_ROOT": "/workspace",
         "DITTO_MCP_OUTPUT_ROOT": "/workspace"
@@ -58,6 +60,8 @@ npm run typecheck
 npm run test:unit
 npm run test:compiler
 npm run test:integration
+npm run test:dist
+npm run test:packed
 npm run test:pack
 npm test
 ```
@@ -65,12 +69,15 @@ npm test
 Coverage includes interface composition, path/symlink boundaries, progress,
 locking, cancellation, MCP schema/errors, actual STDIO transport, Chromium MHTML
 capture, CID assets, IR/CSS/Tailwind/assets/fonts/interactions/motion/SEO,
-framework generation, and deterministic output.
+framework generation, deterministic output, compiled runtime exports, and an
+installed npm-tarball MCP smoke test.
 
 ## Layout
 
 - `src/compiler/`: embedded compiler code and pinned pattern data.
 - `src/`: MCP service, interfaces, policies, and composition.
+- `dist/`: compiled JavaScript, declarations, source maps, and copied compiler data.
+- `scripts/`: TypeScript build helpers.
 - `test/compiler/`: compiler regression tests.
 - `test/fixtures/`: browser-capture fixtures.
 - `test/`: MCP unit and integration tests.
