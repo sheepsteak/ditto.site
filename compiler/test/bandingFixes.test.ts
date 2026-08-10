@@ -207,7 +207,7 @@ describe("buildTailwind source-intent picks the highest active breakpoint per vi
       return n;
     };
     const items = [0, 1, 2].map((i) => mk(`c${i}`, Object.fromEntries(GVPS.map((vp) => [vp, { display: "block" }])), Object.fromEntries(GVPS.map((vp) => [vp, 340])), [{ text: "x" } as IRChild]));
-    const grid = mk("n123", Object.fromEntries(GVPS.map((vp) => [vp, { display: "grid", gridTemplateColumns: gtc[vp], columnGap: "24px", rowGap: "24px", gap: "24px" }])), gridW, items, srcClass);
+    const grid = mk("n123", Object.fromEntries(GVPS.map((vp) => [vp, { display: "grid", gridTemplateColumns: gtc[vp]!, columnGap: "24px", rowGap: "24px", gap: "24px" }])), gridW, items, srcClass);
     const root = mk("n0", Object.fromEntries(GVPS.map((vp) => [vp, {}])), Object.fromEntries(GVPS.map((vp) => [vp, vp])), [grid]);
     return {
       doc: {

@@ -84,7 +84,7 @@ describe("pattern catalog: fingerprint fixtures hit", () => {
   it("matchCatalogNode identifies a generic carousel fingerprint by class token", () => {
     const hits = matchCatalogNode({ tag: "div", attrs: {}, srcClass: "swiper swiper-wrapper" });
     assert.deepEqual(hits.map((h) => h.id), ["carousel_swiper"]);
-    assert.equal(hits[0].kind, "carousel");
+    assert.equal(hits[0]!.kind, "carousel");
   });
 
   it("matchCatalogNode identifies a platform fingerprint by class prefix", () => {

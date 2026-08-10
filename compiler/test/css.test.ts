@@ -812,8 +812,8 @@ describe("RESET_CSS lottie runtime-fit rule", () => {
     // the rule must pin both dimensions so height:100% resolves against the definite overlay
     const m = RESET_CSS.match(/\[data-ditto-lottie\][^{]*\{([^}]*)\}/);
     assert.ok(m, "the data-ditto-lottie rule must be present");
-    assert.match(m![1], /width:\s*100%/);
-    assert.match(m![1], /height:\s*100%/);
+    assert.match(m![1]!, /width:\s*100%/);
+    assert.match(m![1]!, /height:\s*100%/);
   });
 
   it("does not affect the pre-swap placeholder (a direct-child svg, not nested under a div)", () => {

@@ -30,7 +30,7 @@ function ir(root: IRNode): IR {
 }
 
 function motionWith(rotators: MotionCapture["rotators"]): MotionCapture {
-  return { waapi: [], rotators, reveals: [], marquees: [] };
+  return { waapi: [], rotators, reveals: [], marquees: [], lotties: [], lottieInline: {}, cssAnimated: 0 };
 }
 
 describe("rotator misclassification guard — layer 1 (emission)", () => {

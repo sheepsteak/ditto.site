@@ -1117,7 +1117,9 @@ export async function captureSite(opts: {
                          // can skip them. The cheap poster-less-video element stills are always kept
                          // (generation needs a first frame), this only gates the per-viewport page shots.
   log?: (event: Record<string, unknown>) => void;
+  signal?: AbortSignal;
 }): Promise<CaptureResult> {
+  opts.signal?.throwIfAborted();
   const viewports = opts.viewports ?? [...REQUIRED_VIEWPORTS];
   const log = opts.log ?? (() => {});
   // Item 1: resolve the deterministic-env parameters once, at run start, and record
@@ -1271,6 +1273,9 @@ export async function captureSite(opts: {
     args: ["--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage"],
     ...(proxyServer ? { proxy: { server: proxyServer } } : {}),
   });
+
+  const onAbort = (): void => { void browser.close(); };
+  opts.signal?.addEventListener("abort", onAbort, { once: true });
 
   const perViewport: CaptureResult["perViewport"] = [];
   let interaction: InteractionCapture | undefined;
@@ -1992,6 +1997,7 @@ export async function captureSite(opts: {
       (captureSeoResources as SeoResource[]).push(...seoResources.sort((a, b) => a.url.localeCompare(b.url) || a.kind.localeCompare(b.kind)));
     }
   } finally {
+    opts.signal?.removeEventListener("abort", onAbort);
     await browser.close();
   }
 
