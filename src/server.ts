@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { pathToFileURL } from "node:url";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createLocalCloneService } from "./composition.js";
-import { createCloneMcpServer } from "./mcpServer.js";
+import { createLocalCloneService } from "./composition.ts";
+import { createCloneMcpServer } from "./mcpServer.ts";
 
 export async function main(): Promise<void> {
   const service = createLocalCloneService({

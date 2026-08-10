@@ -1,7 +1,7 @@
-export { CloneService, type CloneServiceDeps } from "./cloneService.js";
-export { DirectCompilerAdapter, type DirectCompilerAdapterOptions } from "./compilerAdapter.js";
-export { LocalCloneInputPolicy, type LocalCloneInputPolicyOptions } from "./pathPolicy.js";
-export { FileSystemCloneResultInspector } from "./resultInspector.js";
-export { createCloneMcpServer } from "./mcpServer.js";
-export { createLocalCloneService, type LocalCloneServiceConfig } from "./composition.js";
-export type * from "./types.js";
+export { CloneService, type CloneServiceDeps } from "./cloneService.ts";
+export { DirectCompilerAdapter, type DirectCompilerAdapterOptions } from "./compilerAdapter.ts";
+export { LocalCloneInputPolicy, type LocalCloneInputPolicyOptions } from "./pathPolicy.ts";
+export { FileSystemCloneResultInspector } from "./resultInspector.ts";
+export { createCloneMcpServer } from "./mcpServer.ts";
+export { createLocalCloneService, type LocalCloneServiceConfig } from "./composition.ts";
+export type * from "./types.ts";

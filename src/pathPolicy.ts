@@ -1,7 +1,7 @@
 import { realpath, stat } from "node:fs/promises";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { CloneInputPolicy, CloneToolRequest, NormalizedCloneRequest } from "./types.js";
+import type { CloneInputPolicy, CloneToolRequest, NormalizedCloneRequest } from "./types.ts";
 
 function isWithin(root: string, candidate: string): boolean {
   const rel = relative(root, candidate);
@@ -11,7 +11,11 @@ function isWithin(root: string, candidate: string): boolean {
 export type LocalCloneInputPolicyOptions = { inputRoot: string; outputRoot: string; defaultOutputDir?: string };
 
 export class LocalCloneInputPolicy implements CloneInputPolicy {
-  constructor(private readonly options: LocalCloneInputPolicyOptions) {}
+  private readonly options: LocalCloneInputPolicyOptions;
+
+  constructor(options: LocalCloneInputPolicyOptions) {
+    this.options = options;
+  }
 
   async normalize(request: CloneToolRequest): Promise<NormalizedCloneRequest> {
     const source = request.source?.trim();

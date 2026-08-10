@@ -1,9 +1,9 @@
 import { join } from "node:path";
-import { runClone } from "../compiler/src/runClone.js";
-import { buildIR } from "../compiler/src/normalize/ir.js";
-import { readJSON } from "../compiler/src/util/fsx.js";
-import type { CaptureResult } from "../compiler/src/capture/capture.js";
-import type { CloneCompiler, CloneProgressSink, CompilerRunResult, NormalizedCloneRequest } from "./types.js";
+import { runClone } from "./compiler/runClone.ts";
+import { buildIR } from "./compiler/normalize/ir.ts";
+import { readJSON } from "./compiler/util/fsx.ts";
+import type { CaptureResult } from "./compiler/capture/capture.ts";
+import type { CloneCompiler, CloneProgressSink, CompilerRunResult, NormalizedCloneRequest } from "./types.ts";
 
 export type DirectCompilerAdapterOptions = {
   viewports?: number[]; interactions?: boolean; components?: boolean; motion?: boolean; breakpoints?: boolean;
@@ -12,7 +12,11 @@ function throwIfAborted(signal: AbortSignal): void {
   if (signal.aborted) { const error = new Error("clone cancelled"); error.name = "AbortError"; throw error; }
 }
 export class DirectCompilerAdapter implements CloneCompiler {
-  constructor(private readonly options: DirectCompilerAdapterOptions = {}) {}
+  private readonly options: DirectCompilerAdapterOptions;
+
+  constructor(options: DirectCompilerAdapterOptions = {}) {
+    this.options = options;
+  }
   async run(request: NormalizedCloneRequest, context: { signal: AbortSignal; progress: CloneProgressSink }): Promise<CompilerRunResult> {
     throwIfAborted(context.signal);
     const result = await runClone({

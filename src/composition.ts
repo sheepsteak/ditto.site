@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
-import { CloneService } from "./cloneService.js";
-import { DirectCompilerAdapter } from "./compilerAdapter.js";
-import { LocalCloneInputPolicy } from "./pathPolicy.js";
-import { FileSystemCloneResultInspector } from "./resultInspector.js";
+import { CloneService } from "./cloneService.ts";
+import { DirectCompilerAdapter } from "./compilerAdapter.ts";
+import { LocalCloneInputPolicy } from "./pathPolicy.ts";
+import { FileSystemCloneResultInspector } from "./resultInspector.ts";
 
 export type LocalCloneServiceConfig = { inputRoot?: string; outputRoot?: string; defaultOutputDir?: string };
 export function createLocalCloneService(config: LocalCloneServiceConfig = {}): CloneService {

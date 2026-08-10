@@ -7,10 +7,10 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { CloneService } from "../src/cloneService.js";
-import { DirectCompilerAdapter } from "../src/compilerAdapter.js";
-import { LocalCloneInputPolicy } from "../src/pathPolicy.js";
-import { FileSystemCloneResultInspector } from "../src/resultInspector.js";
+import { CloneService } from "../src/cloneService.ts";
+import { DirectCompilerAdapter } from "../src/compilerAdapter.ts";
+import { LocalCloneInputPolicy } from "../src/pathPolicy.ts";
+import { FileSystemCloneResultInspector } from "../src/resultInspector.ts";
 
 function fixture(): Buffer {
   const b = "----Boundary--stdio";
@@ -42,7 +42,9 @@ test("direct adapter clones MHTML without API, DB, queue, or CLI child", { skip:
 test("packaged launcher speaks clean STDIO MCP", async () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "..");
   const transport = new StdioClientTransport({
-    command: process.execPath, args: [join(root, "bin/ditto-mcp.mjs")], cwd: root,
+    command: process.execPath,
+    args: ["--experimental-strip-types", join(root, "bin/ditto-mcp.ts")],
+    cwd: root,
     env: { ...process.env, DITTO_MCP_INPUT_ROOT: root, DITTO_MCP_OUTPUT_ROOT: root }, stderr: "ignore",
   });
   const client = new Client({ name: "stdio-test", version: "1" });

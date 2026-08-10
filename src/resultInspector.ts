@@ -1,6 +1,6 @@
 import { readdir, stat } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
-import type { CloneFileSummary, CloneResultInspector } from "./types.js";
+import type { CloneFileSummary, CloneResultInspector } from "./types.ts";
 
 export class FileSystemCloneResultInspector implements CloneResultInspector {
   async inspect(appDir: string): Promise<CloneFileSummary> {

@@ -5,32 +5,43 @@
   "description": "Self-contained ephemeral STDIO MCP website compiler.",
   "license": "MIT",
   "type": "module",
-  "bin": { "ditto-mcp-stdio": "./bin/ditto-mcp.mjs" },
-  "exports": { ".": "./src/index.ts" },
-  "files": ["bin", "compiler/data", "compiler/src", "src", "LICENSE", "README.md"],
+  "bin": {
+    "ditto-mcp-stdio": "./bin/ditto-mcp.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "bin",
+    "src",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
-    "start": "node bin/ditto-mcp.mjs",
+    "start": "node --experimental-strip-types bin/ditto-mcp.ts",
     "install-browser": "playwright install chromium",
     "test": "npm run test:unit && npm run test:compiler && npm run test:integration",
-    "test:unit": "node --import tsx --test test/*.unit.test.ts",
-    "test:compiler": "node --import tsx --test compiler/test/*.test.ts",
-    "test:integration": "node --import tsx --test test/*.integration.test.ts",
+    "test:unit": "node --experimental-strip-types --test test/*.unit.test.ts",
+    "test:compiler": "node --experimental-strip-types --test test/compiler/*.test.ts",
+    "test:integration": "node --experimental-strip-types --test test/*.integration.test.ts",
     "test:pack": "npm pack --dry-run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "playwright": "1.56.1",
-    "tsx": "4.22.4",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/node": "22.10.5",
+    "@types/node": "22",
     "@types/pixelmatch": "5.2.6",
     "@types/pngjs": "6.0.5",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "pixelmatch": "5.3.0",
     "pngjs": "7.0.0",
-    "typescript": "5.7.3"
+    "typescript": "^7.0.2"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=22.6"
+  }
 }

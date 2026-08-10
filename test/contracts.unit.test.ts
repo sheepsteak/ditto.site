@@ -5,11 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { CloneService } from "../src/cloneService.js";
-import { LocalCloneInputPolicy } from "../src/pathPolicy.js";
-import { FileSystemCloneResultInspector } from "../src/resultInspector.js";
-import { createCloneMcpServer } from "../src/mcpServer.js";
-import type { CompilerRunResult, NormalizedCloneRequest } from "../src/types.js";
+import { CloneService } from "../src/cloneService.ts";
+import { LocalCloneInputPolicy } from "../src/pathPolicy.ts";
+import { FileSystemCloneResultInspector } from "../src/resultInspector.ts";
+import { createCloneMcpServer } from "../src/mcpServer.ts";
+import type { CompilerRunResult, NormalizedCloneRequest } from "../src/types.ts";
 
 const normalized: NormalizedCloneRequest = {
   source: "/workspace/page.mhtml", outputDir: "/workspace/output", framework: "next", styling: "tailwind",

@@ -1,13 +1,17 @@
 import type {
   CloneCompiler, CloneInputPolicy, CloneProgressSink, CloneResultInspector, CloneToolRequest, CloneToolResult,
-} from "./types.js";
+} from "./types.ts";
 
 const NO_PROGRESS: CloneProgressSink = { emit: () => {} };
 export type CloneServiceDeps = { policy: CloneInputPolicy; compiler: CloneCompiler; inspector: CloneResultInspector };
 
 export class CloneService {
   private active = false;
-  constructor(private readonly deps: CloneServiceDeps) {}
+  private readonly deps: CloneServiceDeps;
+
+  constructor(deps: CloneServiceDeps) {
+    this.deps = deps;
+  }
 
   async clone(request: CloneToolRequest, context?: { signal?: AbortSignal; progress?: CloneProgressSink }): Promise<CloneToolResult> {
     if (this.active) throw new Error("another clone is already running");

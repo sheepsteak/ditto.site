@@ -1,0 +1,10 @@
+#!/usr/bin/env -S node --experimental-strip-types
+
+import { main } from "../src/server.ts";
+
+try {
+  await main();
+} catch (error) {
+  process.stderr.write(`ditto STDIO MCP failed: ${String(error instanceof Error ? error.message : error)}\n`);
+  process.exitCode = 1;
+}

@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { CloneService } from "./cloneService.js";
-import type { CloneProgressSink } from "./types.js";
+import { CloneService } from "./cloneService.ts";
+import type { CloneProgressSink } from "./types.ts";
 
 export function createCloneMcpServer(service: CloneService): McpServer {
   const server = new McpServer({ name: "ditto-stdio", version: "0.1.0" });
