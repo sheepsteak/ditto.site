@@ -63,8 +63,8 @@ test("job manager records failures and cancellation as terminal states", async (
   assert.equal(failedView?.lastEvent?.event, "job_failed");
 
   const cancellingJobs = new InMemoryCloneJobManager({
-    clone: async (_request, context) => {
-      await new Promise<never>((_resolve, reject) => {
+    clone: (_request, context) => {
+      return new Promise<CloneToolResult>((_resolve, reject) => {
         context?.signal?.addEventListener("abort", () => reject(context.signal?.reason), { once: true });
       });
     },
