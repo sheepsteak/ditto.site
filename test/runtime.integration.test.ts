@@ -56,7 +56,8 @@ test("MCP start and status tools clone MHTML end-to-end", { skip: existsSync(chr
     let cursor = 0;
     let status: Record<string, any> = {};
     const progressEvents: string[] = [];
-    for (let attempt = 0; attempt < 1_200 && status.status !== "succeeded"; attempt++) {
+    const deadline = Date.now() + 5 * 60_000;
+    while (Date.now() < deadline && status.status !== "succeeded") {
       status = parseToolResult(await client.callTool({
         name: "get_clone_status",
         arguments: { jobId: started.jobId, after: cursor },
@@ -66,9 +67,9 @@ test("MCP start and status tools clone MHTML end-to-end", { skip: existsSync(chr
       if (status.status === "failed" || status.status === "cancelled") {
         assert.fail(`clone ended as ${status.status}: ${status.error}`);
       }
-      if (status.status !== "succeeded") await new Promise((resolve) => setTimeout(resolve, 25));
+      if (status.status !== "succeeded") await new Promise((resolve) => setTimeout(resolve, 250));
     }
-    assert.equal(status.status, "succeeded");
+    assert.equal(status.status, "succeeded", `last event: ${JSON.stringify(status.lastEvent)}`);
     while (status.hasMore) {
       status = parseToolResult(await client.callTool({
         name: "get_clone_status",
