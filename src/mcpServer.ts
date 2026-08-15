@@ -54,6 +54,7 @@ export function createCloneMcpServer(jobs: CloneJobManager, options: CloneMcpSer
 
       const cancelOnRequestAbort = (): void => { jobs.cancel(started.jobId); };
       extra.signal.addEventListener("abort", cancelOnRequestAbort, { once: true });
+      if (extra.signal.aborted) cancelOnRequestAbort();
       try {
         const completed = await jobs.wait(started.jobId);
         if (!completed) return json({ error: "clone job disappeared", jobId: started.jobId }, true);
