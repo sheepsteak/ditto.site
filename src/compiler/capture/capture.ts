@@ -1342,6 +1342,7 @@ export async function captureSite(opts: {
       });
     };
 
+    const mainFrameNavigationCounts = new WeakMap<import("playwright").Page, { count: number }>();
     const newSession = async (): Promise<{ context: BrowserContext; page: import("playwright").Page }> => {
       const ctx: BrowserContext = await browser.newContext({
         ignoreHTTPSErrors: true,
@@ -1351,6 +1352,12 @@ export async function captureSite(opts: {
         javaScriptEnabled: true,
       });
       const pg = await ctx.newPage();
+      const navigationState = { count: 0 };
+      mainFrameNavigationCounts.set(pg, navigationState);
+      pg.on("framenavigated", (frame) => {
+        if (frame !== pg.mainFrame()) return;
+        navigationState.count++;
+      });
       attachResponseListener(pg);
       // tsx/esbuild wraps functions with a __name() helper for stack traces; that
       // helper does not exist in the browser when we serialize page.evaluate
@@ -1379,6 +1386,7 @@ export async function captureSite(opts: {
     // structured error instead of tying up the pipeline. Attempt 0 waits for `load`;
     // later attempts fall back to `domcontentloaded` (a heavy page may never fire `load`).
     const NAV_BUDGET_MS = 90_000;
+    const LATE_NAV_BUDGET_MS = 10_000;
     const navigateLoaded = async (pg: import("playwright").Page): Promise<Response | null> => {
       log({ event: "goto", url: navigationUrl, sourceUrl: opts.url });
       const navStart = Date.now();
@@ -1404,7 +1412,29 @@ export async function captureSite(opts: {
           `navigation failed for ${navigationUrl} within ${Math.round((Date.now() - navStart) / 1000)}s: ${String((navErr as { message?: string })?.message ?? navErr).slice(0, 300)}`,
         );
       }
+      const navigationCountAtGoto = mainFrameNavigationCounts.get(pg)?.count ?? 0;
       await settle(pg);
+      // `goto(..., waitUntil: "load")` only covers that navigation. A page can schedule
+      // another top-level navigation after load/network-idle; if it commits during the
+      // final settle window, the next page.evaluate loses its execution context. When
+      // that happened, wait once for the replacement chain to become idle, then settle
+      // the final document. Persistent navigation remains a bounded terminal failure.
+      if ((mainFrameNavigationCounts.get(pg)?.count ?? 0) !== navigationCountAtGoto) {
+        log({ event: "late_navigation_settle" });
+        try {
+          await pg.waitForLoadState("networkidle", { timeout: LATE_NAV_BUDGET_MS });
+        } catch (error) {
+          opts.signal?.throwIfAborted();
+          if ((error as { name?: string })?.name !== "TimeoutError") throw error;
+          throw new Error(`navigation did not settle for ${navigationUrl} within ${LATE_NAV_BUDGET_MS / 1000}s`);
+        }
+        opts.signal?.throwIfAborted();
+        const navigationCountAtIdle = mainFrameNavigationCounts.get(pg)?.count ?? 0;
+        await settle(pg);
+        if ((mainFrameNavigationCounts.get(pg)?.count ?? 0) !== navigationCountAtIdle) {
+          throw new Error(`navigation did not remain settled for ${navigationUrl}`);
+        }
+      }
       return response;
     };
 

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Late top-level navigation regression</title>
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      const hop = Number(params.get("hop") || "0");
+      const navigate = () => location.replace(`/late-navigation?hop=${hop + 1}`);
+
+      // Let goto("load") and the first 500 ms network-idle window finish. The initial
+      // navigation begins during capture's final settle window; every committed document
+      // then immediately replaces itself. Capture must wait for this bounded replacement
+      // chain before entering page-evaluation work.
+      if (hop === 0) setTimeout(navigate, 650);
+      else if (hop < 500) setTimeout(navigate, 0);
+    })();
+  </script>
+  <style>
+    body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+    header { padding: 24px 40px; background: #111; color: white; }
+    main { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 32px 40px; }
+    article { min-height: 180px; padding: 20px; background: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <header><h1>Late navigation fixture</h1></header>
+  <main id="catalog"></main>
+  <script>
+    const catalog = document.querySelector("#catalog");
+    for (let i = 0; i < 160; i++) {
+      const card = document.createElement("article");
+      card.innerHTML = `<h2>Product ${i + 1}</h2><p>Deterministic catalog content.</p><button>View product</button>`;
+      catalog.append(card);
+    }
+  </script>
+</body>
+</html>
