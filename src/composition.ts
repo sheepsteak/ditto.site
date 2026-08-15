@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { CloneService } from "./cloneService.ts";
 import { DirectCompilerAdapter } from "./compilerAdapter.ts";
+import { InMemoryCloneJobManager } from "./jobManager.ts";
 import { LocalCloneInputPolicy } from "./pathPolicy.ts";
 import { FileSystemCloneResultInspector } from "./resultInspector.ts";
 
@@ -13,4 +14,8 @@ export function createLocalCloneService(config: LocalCloneServiceConfig = {}): C
     compiler: new DirectCompilerAdapter(),
     inspector: new FileSystemCloneResultInspector(),
   });
+}
+
+export function createLocalCloneJobManager(config: LocalCloneServiceConfig = {}): InMemoryCloneJobManager {
+  return new InMemoryCloneJobManager(createLocalCloneService(config));
 }

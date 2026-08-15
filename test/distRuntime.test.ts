@@ -40,7 +40,10 @@ test("compiled STDIO server speaks MCP without a TypeScript loader", async () =>
   const client = new Client({ name: "dist-runtime-test", version: "1.0.0" });
   await client.connect(transport);
   try {
-    assert.deepEqual((await client.listTools()).tools.map((tool) => tool.name), ["clone_page"]);
+    assert.deepEqual(
+      (await client.listTools()).tools.map((tool) => tool.name),
+      ["clone_page", "get_clone_status", "cancel_clone"],
+    );
   } finally {
     await client.close();
   }

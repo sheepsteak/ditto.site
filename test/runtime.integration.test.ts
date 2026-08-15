@@ -49,6 +49,11 @@ test("packaged launcher speaks clean STDIO MCP", async () => {
   });
   const client = new Client({ name: "stdio-test", version: "1" });
   await client.connect(transport);
-  try { assert.deepEqual((await client.listTools()).tools.map(t => t.name), ["clone_page"]); }
+  try {
+    assert.deepEqual(
+      (await client.listTools()).tools.map(t => t.name),
+      ["clone_page", "get_clone_status", "cancel_clone"],
+    );
+  }
   finally { await client.close(); }
 });

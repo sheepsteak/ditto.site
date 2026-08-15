@@ -40,7 +40,7 @@ try {
   await client.connect(transport);
   try {
     const names = (await client.listTools()).tools.map((tool) => tool.name);
-    if (names.length !== 1 || names[0] !== "clone_page") {
+    if (JSON.stringify(names) !== JSON.stringify(["clone_page", "get_clone_status", "cancel_clone"])) {
       throw new Error(`unexpected packed tools: ${JSON.stringify(names)}`);
     }
   } finally {
