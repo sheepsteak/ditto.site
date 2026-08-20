@@ -51,6 +51,18 @@ For Next.js:
 
 Do not accept an interactive default that conflicts with the request.
 
+After either scaffold command:
+
+```bash
+cd <output-directory>
+npm install
+npm run build
+```
+
+Then start the defined development command on `127.0.0.1`. Keep the process
+running. Wait until its local URL returns a successful response. Stop and read
+the process output if readiness does not occur.
+
 If scaffold creation fails:
 
 1. Read the first error.
@@ -201,7 +213,9 @@ Test widths between observed breakpoints. The layout must remain usable there.
 
 ## Handle assets
 
-Put user-supplied permitted assets in `public/assets`.
+Put only user-supplied asset files with confirmed reproduction rights in
+`public/assets`.
+Remove unused scaffold images, icons, and fonts.
 
 Use:
 
@@ -214,8 +228,8 @@ Use:
 Do not discover or download source assets. Do not use remote hotlinks in the
 final result. Do not use data URLs for large assets.
 
-When the exact asset is unavailable, use a local substitute only with user
-approval. Record the difference.
+When an asset is unavailable, omit it or create an HTML and CSS placeholder.
+Do not add a substitute asset file. Record the difference.
 
 ## Rebuild interaction
 

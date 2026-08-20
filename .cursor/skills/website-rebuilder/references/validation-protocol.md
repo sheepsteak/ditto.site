@@ -14,7 +14,8 @@ Also use the same:
 - Color scheme
 - Motion preference
 
-Create a route × viewport × state matrix. Do not skip a matrix cell. For a
+Create a route × viewport × state matrix. Do not skip an applicable matrix cell.
+Mark a cell `N/A` with a reason when the state cannot exist at that width. For a
 mobile menu, include closed, open, keyboard-open, and Escape-close states when
 the source evidence contains those states.
 
@@ -77,7 +78,7 @@ Check:
 Mark content as:
 
 - Match
-- Intentional local substitute
+- Intentional local mock behavior
 - Missing
 - Out of scope
 
@@ -112,9 +113,9 @@ For important elements, compare:
 - Border radius
 - Overflow
 
-Use pixel measurements from rendered output when browser tools permit. Use
-screenshot guides when direct measurements are not available. Do not inspect
-source markup or styles.
+Take measurements only from screenshots or rendered pixel buffers. Do not query
+DOM nodes, element boxes, accessibility trees, computed styles, page scripts,
+cache files, or network data.
 
 Use these default acceptance targets unless the user sets stricter targets:
 
@@ -164,7 +165,7 @@ Check:
 Use side-by-side screenshots first. Use an image difference view when available.
 
 An image difference view can show where pixels differ. It cannot explain the
-cause. Inspect the page before you edit code.
+cause. Inspect only the rendered comparison before you edit code.
 
 When a difference tool supplies a changed-pixel ratio, use 5 percent as the
 default target after dynamic regions, motion frames, and font antialiasing edges
@@ -247,7 +248,11 @@ responsive rule. Do not add a narrow one-off rule without evidence.
 
 Use at most six correction loops for one route without a new observation. Stop
 earlier if two consecutive loops do not reduce any blocking, high, or medium
-difference. Report the remaining differences and request better evidence.
+difference.
+
+If evidence is sufficient but differences remain after this limit, set the
+result status to `Incomplete`. Report the tolerance results and remaining
+differences. Ask whether the user wants another correction cycle.
 
 ## Stop conditions
 
@@ -256,6 +261,8 @@ Stop as successful when:
 - All build and runtime gates pass.
 - No blocking difference remains.
 - No high difference remains.
+- No main-view medium difference remains.
+- Numeric acceptance targets pass for each applicable matrix cell.
 - Required widths and states have evidence.
 - Offline audit passes.
 - Remaining differences are documented.
@@ -263,7 +270,7 @@ Stop as successful when:
 Stop as blocked when:
 
 - The source cannot be observed through a permitted method.
-- A required asset is unavailable and no approved substitute exists.
+- A required user-supplied asset is unavailable.
 - Required behavior needs a private service.
 - The user must choose between materially different states.
 - Browser comparison is required but no browser evidence is available.
@@ -271,4 +278,11 @@ Stop as blocked when:
 - Project creation fails after one correction and one retry.
 - The local server cannot start after the first actionable error is corrected.
 
-Do not report a blocked result as complete.
+Use one final status:
+
+- `Successful`: all success conditions pass.
+- `Blocked`: an external requirement prevents completion.
+- `Incomplete`: implementation ran, but the correction limit ended with
+  unresolved differences.
+
+Do not report a blocked or incomplete result as complete.

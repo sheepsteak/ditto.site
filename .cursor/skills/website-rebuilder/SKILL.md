@@ -6,8 +6,8 @@ description: Rebuild a visible website as a new, self-contained TypeScript appli
 # Website Rebuilder
 
 Create a new application from visible page behavior. Do not use source code from
-the original application. Use only public behavior, rendered content, permitted
-assets, and material that the user provides.
+the original application. Use only public behavior, rendered content, and
+material that the user provides.
 
 The result must be an editable application. It must not show the source website
 in an iframe. It must not use a full-page screenshot as the implementation.
@@ -23,7 +23,7 @@ Create:
 - A self-contained React and TypeScript application
 - Next.js or Vite, as requested
 - Local application code
-- Local permitted assets
+- Local asset files that the user supplies
 - Responsive layouts
 - Important visible interactions
 - A short reconstruction report
@@ -38,6 +38,8 @@ The result must build and run without the source website.
 - Do not request or use credentials, cookies, tokens, or authenticated sessions.
 - Do not copy original markup, style declarations, scripts, bundles, source maps,
   hidden endpoints, service responses, or private data.
+- Do not query source DOM nodes, element boxes, accessibility trees, computed
+  styles, page scripts, cache files, or network data.
 - Do not add trackers, advertising scripts, analytics, or payment code.
 - Implement all server behavior with deterministic local state or local data.
 - Do not make a source-side change. Do not submit a form or change consent.
@@ -83,12 +85,13 @@ Define:
 - Viewports in scope
 - Visible interaction states
 - Content that can change by session or time
-- Assets that the user permits
+- Asset files that the user supplies and permits
 - Evidence files to capture
 
-Create a route × viewport × state matrix. Every required matrix cell must have
-source evidence and result evidence. An open and closed mobile menu are separate
-states.
+Create a route × viewport × state matrix. Every applicable matrix cell must
+have source evidence and result evidence. Mark a cell `N/A` with a reason when
+the state cannot exist at that width. An open and closed mobile menu are
+separate states.
 
 Use these standard widths unless the source requires other widths:
 
@@ -147,7 +150,7 @@ Use this order:
 1. Application shell and routes
 2. Page section order
 3. Major layout and dimensions
-4. Text and permitted assets
+4. Text and user-supplied assets
 5. Responsive layout
 6. Typography and color
 7. Spacing, borders, shadows, and image crops
@@ -159,8 +162,11 @@ Build after each major stage. Fix build errors before the next stage.
 
 ### 6. Keep the result independent
 
-- Use assets only when the user confirms reproduction rights.
-- Store permitted images, icons, fonts, and data in the new application.
+- Use only asset files that the user supplies with confirmed reproduction rights.
+- Remove unused scaffold asset files.
+- Store user-supplied images, icons, fonts, and data in the new application.
+- If an asset is missing, omit it or create an HTML and CSS placeholder. Do not
+  add a substitute asset file.
 - Replace unavailable server data with clear local data or local mock behavior.
 - Replace all forms with local non-submitting behavior.
 - Remove source tracking parameters from links.
@@ -189,13 +195,14 @@ Use [Reconstruction report](assets/reconstruction-report.md).
 
 Report:
 
+- Final status: `Successful`, `Blocked`, or `Incomplete`
 - Output path
 - Framework and styling system
 - Routes implemented
 - Viewports and states tested
 - Build and runtime test results
 - Offline runtime test result
-- Assets that are local, replaced, or missing
+- User-supplied assets, omitted assets, and HTML or CSS placeholders
 - Important remaining differences
 - Access or evidence limitations
 
@@ -203,18 +210,23 @@ Do not say that the result is exact. State what the evidence proves.
 
 ## Completion criteria
 
-Finish only when:
+Set the result status to `Successful` only when:
 
 - The application builds without an error.
 - The application starts without an error.
 - Main content exists at all required widths.
 - Section order matches.
-- Major geometry matches.
-- Important text and permitted assets are present.
+- Numeric validation targets pass.
+- Main-view medium differences are resolved.
+- Important text and user-supplied assets are present.
 - Required responsive changes work.
 - Required interaction states work.
 - The running application makes no external network request.
 - Remaining differences are listed.
+
+Use `Blocked` when an external requirement prevents work. Use `Incomplete` when
+the correction limit ends with unresolved differences. Do not describe either
+status as complete.
 
 ## References
 

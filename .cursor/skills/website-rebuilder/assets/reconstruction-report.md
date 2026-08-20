@@ -1,5 +1,10 @@
 # Website Reconstruction Report
 
+## Status
+
+- Final status: Successful, Blocked, or Incomplete
+- Status reason:
+
 ## Result
 
 - Output path:
@@ -44,6 +49,8 @@
 | 1920 px |  |  |
 | Required interactions |  |  |
 | Offline runtime with no external request |  |  |
+| Numeric geometry targets |  |  |
+| Changed-pixel target |  |  |
 
 ## Route, viewport, and state matrix
 
@@ -51,11 +58,17 @@
 | --- | ---: | --- | --- | --- | --- |
 |  |  |  |  |  |  |
 
+## Correction cycles
+
+- Cycles completed:
+- Last cycle with measurable improvement:
+- Correction limit reached:
+
 ## Asset status
 
 | Asset | Status | Note |
 | --- | --- | --- |
-|  | Local, replaced, missing, or out of scope |  |
+|  | User-supplied, omitted, placeholder, missing, or out of scope |  |
 
 ## Remaining differences
 

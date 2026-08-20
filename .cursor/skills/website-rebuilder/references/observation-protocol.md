@@ -33,6 +33,10 @@ Do not inspect, collect, or reuse:
 
 Use observations to write new code.
 
+Take measurements only from screenshots or rendered pixel buffers. Do not query
+DOM nodes, element boxes, accessibility trees, computed styles, page scripts,
+cache files, or network data.
+
 ## Evidence directory
 
 Keep observation files outside the application and repository:
@@ -157,7 +161,7 @@ Record the page from top to bottom:
 
 | Field | Example |
 | --- | --- |
-| Section ID | `hero` |
+| Observer section label | `hero` |
 | Visible purpose | Main campaign |
 | Width behavior | Full width |
 | Height behavior | 620 px desktop, content height mobile |
@@ -216,7 +220,7 @@ browser cache, network traffic, or session.
 When an asset is not available:
 
 1. Ask the user for the asset.
-2. Use a clear local placeholder if the user permits it.
+2. Omit it or use a clear HTML and CSS placeholder.
 3. Record the difference.
 
 Do not use a full-page source screenshot as the page implementation.
