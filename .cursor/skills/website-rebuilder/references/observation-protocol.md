@@ -8,32 +8,34 @@ behavior without reuse of original application code.
 You can record:
 
 - Rendered text
-- Rendered element order
-- Accessible names and roles
-- Element positions and sizes
-- Computed visual properties
+- Visible element order
+- Pixel positions and sizes
+- Visible colors, type, spacing, and effects
 - Visible interaction behavior
-- Public image, icon, video, and font files that the user permits
 - URLs shown in visible links
 - User-provided MHTML, screenshots, and recordings
 
-Do not collect or reuse:
+Do not inspect, collect, or reuse:
 
+- Original HTML or serialized DOM
+- Original CSS or individual style declarations
 - Original JavaScript
 - Original TypeScript
+- Bundles and manifests
 - Source maps
 - Private service responses
 - Authentication tokens
 - Session cookies
 - Hidden user data
-- Large copied CSS blocks
+- Browser cache files
+- Network payloads
 - Tracking or advertising code
 
 Use observations to write new code.
 
 ## Evidence directory
 
-Keep observation files outside the shipped application when possible:
+Keep observation files outside the application and repository:
 
 ```text
 reconstruction-evidence/
@@ -55,7 +57,8 @@ home-1920-initial.png
 Record the date, source URL, viewport size, route, scroll position, and state
 for each item.
 
-Do not commit evidence when it contains private or licensed material.
+Never commit source evidence. Commit only new application code and derived notes
+that contain no private content, credentials, or original implementation data.
 
 ## Route scope
 
@@ -70,8 +73,47 @@ For each route, record:
 - Shared shell elements
 - Route-specific sections
 
-Do not crawl a complete domain unless the user requests a route set. A small
-explicit route set gives better results and prevents unbounded work.
+Observe only the exact routes that the user supplies. Do not crawl, enumerate,
+or discover other domain routes.
+
+## Source procedures
+
+### Public URL
+
+1. Open only the exact public route.
+2. Do not sign in or supply credentials.
+3. Do not accept terms or change consent.
+4. Do not submit forms or trigger a source-side change.
+5. If an overlay blocks observation, stop and request user-provided evidence.
+
+### MHTML
+
+1. Use only an archive that the user supplies.
+2. Open it in an isolated browser profile.
+3. Disable outbound network access.
+4. Do not inspect, search, parse, or extract archive markup, styles, scripts,
+   metadata, or embedded files.
+5. Observe only the rendered pixels and visible interaction state.
+6. If the archive needs external access to render, stop and request screenshots.
+
+### Screenshots
+
+For each screenshot, require:
+
+- Route
+- Viewport width and height
+- Browser zoom
+- Scroll position
+- Visible state
+
+Do not infer responsive behavior from one width. Request missing widths.
+
+### Screen recording
+
+Use a recording to observe state changes and motion. Require still screenshots
+for exact geometry, color, and type comparison.
+
+Do not infer an unseen state. Mark it as unavailable.
 
 ## Viewport capture
 
@@ -82,17 +124,25 @@ Use these standard widths:
 - 1280 px
 - 1920 px
 
-Use a consistent viewport height, such as 900 px, when possible. Also use a
-source-specific height when a fixed element depends on height.
+Use these fixed settings unless the user supplies different evidence:
+
+- Viewport height: 900 px
+- Device pixel ratio: 1
+- Browser zoom: 100 percent
+- Color scheme: light
+- Reduced motion: no preference
+- Locale: record the source locale
+- Time zone: record the source time zone
+- Browser and version: use the same value for source and result
 
 For each width:
 
-1. Set browser zoom to 100 percent.
+1. Apply all fixed browser settings.
 2. Open a clean source state.
 3. Wait for document load.
 4. Wait for visible fonts and images.
 5. Wait for short entrance motion.
-6. Close only permitted dialogs.
+6. Stop if a dialog blocks the required state.
 7. Return to scroll position zero.
 8. Capture the initial viewport.
 9. Capture the full page.
@@ -145,23 +195,23 @@ Create a small token set from repeated observations:
 - Shadow styles
 - Content widths
 
-Use computed values as evidence. Convert them into a coherent new token system.
-Do not copy the complete original stylesheet.
+Use pixel measurements and visible color samples as evidence. Convert them into
+a coherent new token system. Do not inspect or copy the original stylesheet.
 
 ## Asset inventory
 
 For each visible asset, record:
 
 - Purpose
-- Source location
 - Display size
 - Crop behavior
 - Format
 - Permission state
 - Local target file name
 
-Prefer the largest suitable public image variant. Keep its aspect ratio. Do not
-download private, signed, or session-only assets without user permission.
+Use only asset files that the user supplies with confirmed reproduction rights.
+Do not discover, download, or extract assets from the source page, archive,
+browser cache, network traffic, or session.
 
 When an asset is not available:
 
@@ -198,7 +248,7 @@ For each state, record:
 - Outside-click or Escape behavior
 
 Do not reproduce real account, payment, tracking, or data-submission behavior.
-Use local state or a safe mock.
+Use local state or a local mock.
 
 ## Dynamic content
 
@@ -222,7 +272,7 @@ or a recording as the fixed source.
 Implementation can start when:
 
 - Every route has an initial screenshot.
-- Every required width has evidence.
+- Every route × width × state matrix cell has evidence.
 - Section order is known.
 - Major dimensions are known.
 - Text and asset inventories are sufficient.

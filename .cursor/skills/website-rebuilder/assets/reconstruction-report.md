@@ -17,6 +17,9 @@
 - Routes observed:
 - Viewports observed:
 - Interaction states observed:
+- Browser and version:
+- Viewport height and device pixel ratio:
+- Locale and time zone:
 - Evidence limitations:
 
 ## Implementation
@@ -25,7 +28,7 @@
 - Shared components:
 - Local data:
 - Local assets:
-- Safe mock behavior:
+- Local mock behavior:
 
 ## Verification
 
@@ -40,7 +43,13 @@
 | 1280 px |  |  |
 | 1920 px |  |  |
 | Required interactions |  |  |
-| Source-independent runtime |  |  |
+| Offline runtime with no external request |  |  |
+
+## Route, viewport, and state matrix
+
+| Route | Width | State | Source evidence | Result evidence | Result |
+| --- | ---: | --- | --- | --- | --- |
+|  |  |  |  |  |  |
 
 ## Asset status
 

@@ -1,6 +1,6 @@
 ---
 name: website-rebuilder
-description: Rebuild a visible website as a self-contained TypeScript application by using clean-room browser observation and visual comparison. Use when the user asks to clone, copy, recreate, or reproduce a web page or small website. Do not use this skill for a Git repository clone.
+description: Rebuild a visible website as a new, self-contained TypeScript application by using clean-room browser observation and visual comparison. Use when the user asks to clone, copy, recreate, or reproduce a web page or small website.
 ---
 
 # Website Rebuilder
@@ -11,6 +11,10 @@ assets, and material that the user provides.
 
 The result must be an editable application. It must not show the source website
 in an iframe. It must not use a full-page screenshot as the implementation.
+
+Clean-room observation permits visible pixel inspection and read-only
+measurements of rendered output. It does not permit reuse of original markup,
+style declarations, scripts, bundles, or service data.
 
 ## Output
 
@@ -29,12 +33,14 @@ The result must build and run without the source website.
 ## Safety and access rules
 
 - Rebuild only content that the user has permission to reproduce.
-- Observe only content available through the permitted user session.
+- Observe only exact public routes that the user supplies.
 - Do not bypass a login, CAPTCHA, paywall, rate limit, or access control.
-- Do not copy original scripts, source maps, hidden endpoints, or private data.
-- Do not copy large blocks of original CSS or JavaScript.
+- Do not request or use credentials, cookies, tokens, or authenticated sessions.
+- Do not copy original markup, style declarations, scripts, bundles, source maps,
+  hidden endpoints, service responses, or private data.
 - Do not add trackers, advertising scripts, analytics, or payment code.
-- Use a local mock for unsafe or unavailable server behavior.
+- Implement all server behavior with deterministic local state or local data.
+- Do not make a source-side change. Do not submit a form or change consent.
 
 ## Required inputs
 
@@ -42,10 +48,10 @@ Get these values before implementation:
 
 | Input | Default |
 | --- | --- |
-| Source | Required URL, MHTML file, screenshots, or screen recording |
-| Output directory | Required or create a clear new directory |
+| Source | Required public URL, MHTML file, screenshots, or screen recording |
+| Output directory | Required new or empty directory |
 | Framework | Next.js unless the user requests Vite |
-| Styling | Follow the target repository or use CSS modules |
+| Styling | CSS modules unless the user requests another local method |
 | Routes | One page unless the user lists more routes |
 | Important states | Initial page plus visible menus and responsive states |
 
@@ -54,17 +60,18 @@ Otherwise, use the defaults and continue.
 
 ## Core workflow
 
-### 1. Inspect the target repository
+### 1. Prepare an isolated output
 
-If an application already exists:
+1. Confirm that the output path is new or empty.
+2. If it contains files, stop and ask for a new path. Do not overwrite it.
+3. Confirm that Node.js and one package manager are available.
+4. Confirm that an interactive browser is available.
+5. Create a new React and TypeScript application.
+6. Use the current official project creation method.
+7. Add only required dependencies.
 
-1. Read its `package.json`.
-2. Identify its framework, styling system, package manager, and route structure.
-3. Keep its conventions.
-4. Do not replace unrelated code.
-
-If no application exists, create a new React and TypeScript application. Use
-the current official project creation method. Add only required dependencies.
+Do not inspect or inherit application code, configuration, components, styles,
+or libraries from another implementation.
 
 ### 2. Create an observation plan
 
@@ -79,6 +86,10 @@ Define:
 - Assets that the user permits
 - Evidence files to capture
 
+Create a route × viewport × state matrix. Every required matrix cell must have
+source evidence and result evidence. An open and closed mobile menu are separate
+states.
+
 Use these standard widths unless the source requires other widths:
 
 - 375 px
@@ -88,13 +99,14 @@ Use these standard widths unless the source requires other widths:
 
 ### 3. Observe the source
 
-Use an interactive browser when available.
+Use an interactive browser.
 
 For each route and viewport:
 
 1. Open the source.
 2. Wait for visible content, images, and fonts.
-3. Close permitted consent or promotional dialogs.
+3. Stop if an overlay prevents observation. Ask the user for evidence with the
+   overlay already resolved.
 4. Capture the initial viewport.
 5. Capture the full page.
 6. Record section order and major measurements.
@@ -102,6 +114,9 @@ For each route and viewport:
 8. Record colors, type, spacing, borders, shadows, and image crops.
 9. Test important menus, tabs, accordions, hover states, and focus states.
 10. Record responsive changes.
+
+Do not accept terms, change consent, sign in, submit forms, make a purchase,
+upload data, or trigger a source-side change.
 
 Do not start implementation before the observation set is sufficient.
 
@@ -144,12 +159,13 @@ Build after each major stage. Fix build errors before the next stage.
 
 ### 6. Keep the result independent
 
+- Use assets only when the user confirms reproduction rights.
 - Store permitted images, icons, fonts, and data in the new application.
-- Replace unavailable server data with clear local data or safe mock behavior.
-- Replace forms that submit data with local non-submitting behavior unless the
-  user supplies a safe target.
+- Replace unavailable server data with clear local data or local mock behavior.
+- Replace all forms with local non-submitting behavior.
 - Remove source tracking parameters from links.
-- Do not depend on the source DOM, scripts, stylesheets, or runtime endpoints.
+- Do not depend on the source DOM, scripts, stylesheets, runtime endpoints, or
+  any external network resource.
 
 ### 7. Validate and improve
 
@@ -178,6 +194,7 @@ Report:
 - Routes implemented
 - Viewports and states tested
 - Build and runtime test results
+- Offline runtime test result
 - Assets that are local, replaced, or missing
 - Important remaining differences
 - Access or evidence limitations
@@ -196,7 +213,7 @@ Finish only when:
 - Important text and permitted assets are present.
 - Required responsive changes work.
 - Required interaction states work.
-- No source website is required at runtime.
+- The running application makes no external network request.
 - Remaining differences are listed.
 
 ## References

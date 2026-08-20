@@ -3,6 +3,21 @@
 Use the same route, viewport, scroll position, and state for each source and
 result comparison.
 
+Also use the same:
+
+- Viewport height
+- Device pixel ratio
+- Browser and version
+- Browser zoom
+- Locale
+- Time zone
+- Color scheme
+- Motion preference
+
+Create a route × viewport × state matrix. Do not skip a matrix cell. For a
+mobile menu, include closed, open, keyboard-open, and Escape-close states when
+the source evidence contains those states.
+
 ## Validation order
 
 Use this order:
@@ -30,9 +45,21 @@ Confirm:
 - Local server starts.
 - Requested routes return content.
 - Browser console has no blocking error.
-- No source website resource is required at runtime.
+- An offline reload shows the same required content.
+- The running application makes no external network request.
 
 Record each command and its result.
+
+For the offline audit:
+
+1. Start the result with outbound network access blocked when the environment
+   permits it.
+2. Reload every requested route.
+3. Record all failed resource requests.
+4. Fail the gate if a required script, style, font, image, media file, data file,
+   or service call uses an external host.
+5. Permit an external link only when it does not load a resource before the user
+   selects it.
 
 ## 2. Content comparison
 
@@ -85,8 +112,19 @@ For important elements, compare:
 - Border radius
 - Overflow
 
-Use direct measurements when browser tools permit. Use screenshot guides when
-direct measurements are not available.
+Use pixel measurements from rendered output when browser tools permit. Use
+screenshot guides when direct measurements are not available. Do not inspect
+source markup or styles.
+
+Use these default acceptance targets unless the user sets stricter targets:
+
+- Exact section order
+- Exact visible text, except marked dynamic content
+- Important element position and size within 8 px or 1 percent of viewport
+  width, whichever is larger
+- Full page height within 2 percent after marked dynamic regions are excluded
+- No clipped required content
+- No horizontal page overflow
 
 ## 5. Responsive comparison
 
@@ -128,6 +166,10 @@ Use side-by-side screenshots first. Use an image difference view when available.
 An image difference view can show where pixels differ. It cannot explain the
 cause. Inspect the page before you edit code.
 
+When a difference tool supplies a changed-pixel ratio, use 5 percent as the
+default target after dynamic regions, motion frames, and font antialiasing edges
+are excluded. Do not use this value as the only completion test.
+
 ## 7. Interaction comparison
 
 For each required state:
@@ -151,7 +193,10 @@ Check:
 - Focus
 - Form state
 
-Use local safe behavior for forms and private actions.
+Use local non-submitting behavior for forms and private actions.
+
+If source evidence does not show a required interaction state, mark that matrix
+cell as blocked. Do not invent the behavior.
 
 ## 8. Motion comparison
 
@@ -200,6 +245,10 @@ Do not make unrelated visual changes in one loop.
 If one fix improves one width but breaks another width, correct the shared
 responsive rule. Do not add a narrow one-off rule without evidence.
 
+Use at most six correction loops for one route without a new observation. Stop
+earlier if two consecutive loops do not reduce any blocking, high, or medium
+difference. Report the remaining differences and request better evidence.
+
 ## Stop conditions
 
 Stop as successful when:
@@ -208,7 +257,7 @@ Stop as successful when:
 - No blocking difference remains.
 - No high difference remains.
 - Required widths and states have evidence.
-- The result does not depend on the source.
+- Offline audit passes.
 - Remaining differences are documented.
 
 Stop as blocked when:
@@ -218,5 +267,8 @@ Stop as blocked when:
 - Required behavior needs a private service.
 - The user must choose between materially different states.
 - Browser comparison is required but no browser evidence is available.
+- Required route, width, or state evidence is missing.
+- Project creation fails after one correction and one retry.
+- The local server cannot start after the first actionable error is corrected.
 
 Do not report a blocked result as complete.

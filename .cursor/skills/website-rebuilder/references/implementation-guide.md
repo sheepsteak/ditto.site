@@ -22,7 +22,41 @@ Use Vite when the result needs:
 Use React and TypeScript. Use the current official project creation method.
 Install current dependency versions when a new dependency is required.
 
-If a target repository already exists, keep its framework and package manager.
+## Preflight
+
+Before scaffold work:
+
+1. Resolve the output path.
+2. Confirm that the path is new or empty.
+3. Stop if the path contains files. Do not delete or overwrite them.
+4. Run `node --version` and the selected package manager version command.
+5. Confirm that the installed Node.js version meets the current framework
+   requirement.
+6. Confirm that the package registry is available.
+
+Use `npm` unless the user requests another package manager.
+
+For Vite, use:
+
+```bash
+npm create vite@latest <output-directory> -- --template react-ts
+```
+
+For Next.js:
+
+1. Run `npx create-next-app@latest --help`.
+2. Select explicit non-interactive flags for TypeScript, the application router,
+   a source directory, linting, and the selected styling method.
+3. Run the command with `<output-directory>`.
+
+Do not accept an interactive default that conflicts with the request.
+
+If scaffold creation fails:
+
+1. Read the first error.
+2. Correct one environment or command problem.
+3. Retry once.
+4. Stop and report the blocker if the retry fails.
 
 ## Keep the directory clear
 
@@ -125,7 +159,7 @@ Create a small new token system:
 }
 ```
 
-Use observed values to select tokens. Do not paste the original stylesheet.
+Use visible measurements to select tokens. Write every declaration independently.
 
 Use tokens for repeated colors, spacing, type, radii, and shadows.
 
@@ -167,18 +201,18 @@ Test widths between observed breakpoints. The layout must remain usable there.
 
 ## Handle assets
 
-Put permitted assets in `public/assets` or the existing asset directory.
+Put user-supplied permitted assets in `public/assets`.
 
 Use:
 
 - Clear file names
 - Correct image dimensions
 - Correct aspect ratio
-- Local font files when permitted
+- Local font files that the user supplies and permits
 - Useful alternative text
 
-Do not use remote hotlinks in the final result. Do not use data URLs for large
-assets.
+Do not discover or download source assets. Do not use remote hotlinks in the
+final result. Do not use data URLs for large assets.
 
 When the exact asset is unavailable, use a local substitute only with user
 approval. Record the difference.
@@ -202,6 +236,9 @@ Include keyboard behavior:
 - Escape close when observed
 - Focus return after a dialog closes
 
+If a required state is not visible in the supplied evidence, do not invent it.
+Mark it as blocked and request evidence.
+
 Do not connect account, checkout, payment, tracking, or private data services.
 
 ## Rebuild motion
@@ -212,8 +249,7 @@ Use:
 
 - CSS transitions for hover and small state changes
 - CSS keyframes for simple repeated motion
-- A small motion library only when the project already uses it or the behavior
-  requires it
+- A small current motion library only when the behavior requires it
 
 Respect reduced-motion preferences.
 
@@ -230,6 +266,7 @@ Do not:
 - Load source scripts at runtime
 - Load source stylesheets at runtime
 - Call private source services
+- Make any external network request at runtime
 - Hide mismatches outside the tested viewport
 
 The application must remain editable and understandable.
