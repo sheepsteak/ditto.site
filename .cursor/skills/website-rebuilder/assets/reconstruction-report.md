@@ -36,6 +36,7 @@
 | Geometry targets |  |  |
 | Changed-pixel target |  |  |
 | Required interactions |  |  |
+| Accessibility |  |  |
 
 ## Matrix
 
@@ -48,6 +49,12 @@
 | Asset | Status | Note |
 | --- | --- | --- |
 |  | Supplied, downloaded, placeholder, or out of scope |  |
+
+## Accepted differences
+
+| Item | Type | Reason |
+| --- | --- | --- |
+|  | Placeholder, font substitution, or dynamic content |  |
 
 ## Correction loops
 

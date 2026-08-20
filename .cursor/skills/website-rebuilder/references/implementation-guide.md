@@ -26,11 +26,12 @@ npm create vite@latest <output-directory> -- --template react-ts
 ```
 
 For Next.js, first run `npx create-next-app@latest --help`. Then run the command
-with explicit flags for TypeScript, the router, the source directory, the linter,
-and the styling method. Do not accept an interactive default that disagrees with
-the request.
+with an explicit flag for every prompt that the help text lists, including the
+language, the router, the source directory, the linter, the styling method, and
+the import alias. Add the flag that accepts the remaining defaults. The command
+must not open a prompt. A prompt stops a non-interactive shell.
 
-Then prepare and start the application:
+Then prepare the application:
 
 ```bash
 cd <output-directory>
@@ -38,8 +39,11 @@ npm install
 npm run build
 ```
 
-Start the development command on `127.0.0.1`. Keep the process running. Wait
+Serve the production build on `127.0.0.1` and keep the process running. Wait
 until the local URL answers. Read the process output if it does not answer.
+
+Use the production build for every comparison. A development server adds an
+overlay that changes the picture.
 
 If the project creation fails, correct one problem, and try one more time. Stop
 and report the blocker if the second try fails.
@@ -52,7 +56,7 @@ A small result can use this shape:
 src/
   components/
   data/
-  app/ or pages/
+  app/
   styles/
 public/
   assets/
@@ -63,9 +67,14 @@ state, and the assets apart. Do not add an abstraction that has one use.
 
 ## Routes
 
-For each requested route, define the path, the page component, the shared
-header, the shared footer, and the route content. Build each shared part one
-time. Do not add a route that the user did not request.
+Serve one requested page at `/`. Do not copy the path of the source URL. Add a
+path only when the user asks for more than one page.
+
+For each route, define the page component, the shared header, the shared footer,
+and the route content. Build each shared part one time.
+
+Set the document title, the language, the description, and the favicon from the
+observation.
 
 ## Components
 
@@ -94,7 +103,7 @@ Render each repeated group from an array.
 
 ## Tokens
 
-Write a small token set from the observed values:
+Write a small token set from the measured values:
 
 ```css
 :root {
@@ -109,11 +118,13 @@ Write a small token set from the observed values:
 
 Use a token for each repeated color, space, radius, and shadow.
 
-For each font, use one of these methods, in this order:
+For each font, use the first method in this list that the asset option permits:
 
-1. Use a font file that the user supplies. Store it in the application.
-2. Use a system font stack when the observed font is a system font.
-3. Use the closest available font and record the substitution.
+1. Store a font file that the user supplies.
+2. Store the public font file of the observed route, under the `Downloaded`
+   option.
+3. Use a system font stack when the observed font is a system font.
+4. Use the closest available font. Record the substitution.
 
 Do not load a font from another host at runtime. That breaks the offline test.
 
@@ -130,9 +141,9 @@ measured pixel position.
 
 ## Responsive rules
 
-Start with the smallest layout. Add a breakpoint only where the observation
-shows a change of column count, navigation mode, visibility, alignment, spacing,
-type scale, image crop, or order.
+Start with the smallest layout. Add a breakpoint at each measured change point.
+A change point is a change of column count, navigation mode, visibility,
+alignment, spacing, type scale, image crop, or order.
 
 Test the widths between the breakpoints. The layout must stay usable there.
 
@@ -141,15 +152,17 @@ Test the widths between the breakpoints. The layout must stay usable there.
 Apply the option from the decision table in `SKILL.md`:
 
 - `Supplied`: put the user files in `public/assets`.
-- `Downloaded`: download the public files of the observed routes into
-  `public/assets`. Keep the original aspect ratio.
-- `Placeholder`: draw a block with HTML and CSS at the observed box size. Use a
-  neutral fill or the average color.
+- `Downloaded`: download the public image, icon, and font files of the observed
+  routes into `public/assets`. Keep the original aspect ratio.
+- `Placeholder`: draw a block with HTML and CSS at the measured box size. Use a
+  neutral fill or the average color. Give it the same alternative text.
 
 Remove the unused images, icons, and fonts of the scaffold.
 
-Give each image a correct display size and useful alternative text. Do not link
-to another host in the result. Do not put a large file in a data URL.
+Give each image a correct display size and useful alternative text. Do not load
+a file from another host in the result. Do not put a large file in a data URL.
+
+A link can point to another host. A link loads nothing before a user selects it.
 
 Record each placeholder and each substitution in the report.
 
@@ -175,6 +188,19 @@ motion library only where the behavior needs one.
 
 Obey the reduced-motion preference. Do not delay access to content.
 
+## Accessibility
+
+Give the result these properties:
+
+- One `h1`, and a heading order with no missing level
+- Landmark elements for the header, the navigation, the main area, and the footer
+- Alternative text for each image, and an empty value for a decorative image
+- A visible focus indicator on each control
+- `aria-expanded` and `aria-controls` on each control that opens a panel
+- A focus trap, a scroll lock, and Escape support in a full-screen menu or dialog
+- Text contrast of at least 4.5 to 1, and 3 to 1 for large text
+- A keyboard path to every interactive element
+
 ## Do not create false fidelity
 
 Do not:
@@ -183,7 +209,7 @@ Do not:
 - Cover the page with a picture of the source
 - Replace text with a picture
 - Draw the full page on a canvas
-- Load a script, a style, a font, or data from another host at runtime
+- Load a script, a style, a font, an image, or data from another host at runtime
 - Hide a difference outside the tested viewport
 
 ## Build gates
