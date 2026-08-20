@@ -55,8 +55,17 @@ Record the date, route, width, height, scroll position, and state for each file.
 2. Capture the first view, including any consent banner.
 3. Close or refuse the banner, the promotion, or the modal.
 4. Do not sign in, accept terms, send a form, buy, or upload.
-5. Stop and ask for supplied evidence when the overlay stays after you refuse
-   it, or when the only control accepts terms.
+5. Confirm that the overlay is gone. Measure the largest fixed element before
+   and after, as a percentage of the viewport area.
+6. Stop and ask for supplied evidence when the overlay stays, or when the only
+   control accepts terms.
+
+A consent dialog is frequently inside a cross-origin iframe. Search the main
+document and every frame. One observed page held its control in one of 59
+frames, so a search of the main document alone finds nothing.
+
+Match a control that refuses or closes, such as `Reject`, `Decline`, `Only
+necessary`, or `Close`. Never select a control that accepts or agrees.
 
 Clear cookies and storage before each width. A dismissed banner otherwise hides
 itself at every later width and makes the matrix inconsistent.
