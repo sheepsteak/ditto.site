@@ -1,57 +1,36 @@
 # Implementation Guide
 
-Write new application code from the observation set.
+Write new code from the observation set.
 
-## Choose the application shape
+## Framework
 
-Use the user's required framework.
+Use Next.js for file-based routes, server rendering, or route metadata. Use Vite
+for one client-rendered page or a small static application.
 
-Use Next.js when the result needs:
-
-- File-based application routes
-- Server rendering
-- Route metadata
-- Built-in image handling
-
-Use Vite when the result needs:
-
-- One client-rendered page
-- A small static application
-- Simple local preview and build commands
-
-Use React and TypeScript. Use the current official project creation method.
-Install current dependency versions when a new dependency is required.
+Use React and TypeScript. Use the current official method to create the project.
 
 ## Preflight
 
-Before scaffold work:
-
 1. Resolve the output path.
-2. Confirm that the path is new or empty.
-3. Stop if the path contains files. Do not delete or overwrite them.
-4. Run `node --version` and the selected package manager version command.
-5. Confirm that the installed Node.js version meets the current framework
-   requirement.
-6. Confirm that the package registry is available.
+2. Stop if the path holds files. Do not delete or write over them.
+3. Run `node --version` and the version command of the package manager.
+4. Confirm that the Node.js version agrees with the framework requirement.
+5. Confirm that the package registry answers.
 
-Use `npm` unless the user requests another package manager.
+Use `npm` unless the user asks for a different package manager.
 
-For Vite, use:
+For Vite:
 
 ```bash
 npm create vite@latest <output-directory> -- --template react-ts
 ```
 
-For Next.js:
+For Next.js, first run `npx create-next-app@latest --help`. Then run the command
+with explicit flags for TypeScript, the router, the source directory, the linter,
+and the styling method. Do not accept an interactive default that disagrees with
+the request.
 
-1. Run `npx create-next-app@latest --help`.
-2. Select explicit non-interactive flags for TypeScript, the application router,
-   a source directory, linting, and the selected styling method.
-3. Run the command with `<output-directory>`.
-
-Do not accept an interactive default that conflicts with the request.
-
-After either scaffold command:
+Then prepare and start the application:
 
 ```bash
 cd <output-directory>
@@ -59,18 +38,13 @@ npm install
 npm run build
 ```
 
-Then start the defined development command on `127.0.0.1`. Keep the process
-running. Wait until its local URL returns a successful response. Stop and read
-the process output if readiness does not occur.
+Start the development command on `127.0.0.1`. Keep the process running. Wait
+until the local URL answers. Read the process output if it does not answer.
 
-If scaffold creation fails:
+If the project creation fails, correct one problem, and try one more time. Stop
+and report the blocker if the second try fails.
 
-1. Read the first error.
-2. Correct one environment or command problem.
-3. Retry once.
-4. Stop and report the blocker if the retry fails.
-
-## Keep the directory clear
+## Structure
 
 A small result can use this shape:
 
@@ -78,67 +52,34 @@ A small result can use this shape:
 src/
   components/
   data/
-  pages/ or app/
+  app/ or pages/
   styles/
 public/
   assets/
 ```
 
-Separate:
+Keep the page structure, the content data, the visual tokens, the interaction
+state, and the assets apart. Do not add an abstraction that has one use.
 
-- Page structure
-- Repeated content
-- Visual tokens
-- Interaction state
-- Local assets
+## Routes
 
-Do not add abstraction that has no repeated use.
+For each requested route, define the path, the page component, the shared
+header, the shared footer, and the route content. Build each shared part one
+time. Do not add a route that the user did not request.
 
-## Build a route map
+## Components
 
-For each requested route, define:
+Prefer a small set of semantic components, such as `SiteHeader`, `PrimaryNav`,
+`HeroSection`, `CardGrid`, `Accordion`, and `SiteFooter`.
 
-- Route path
-- Page component
-- Shared header
-- Shared footer
-- Route data
-- Route-specific sections
+Use `header`, `nav`, `main`, `section`, `article`, and `footer`. Use a button for
+an action. Use a link for navigation.
 
-Build shared shell components once. Keep route-specific content out of shared
-components.
+Do not make one component for each wrapper element.
 
-Do not invent routes that the user did not request.
+## Content data
 
-## Build semantic components
-
-Prefer components such as:
-
-- `SiteHeader`
-- `PrimaryNav`
-- `HeroSection`
-- `CardGrid`
-- `ProductCard`
-- `PromoBanner`
-- `Accordion`
-- `SiteFooter`
-
-Use semantic HTML:
-
-- `header`
-- `nav`
-- `main`
-- `section`
-- `article`
-- `footer`
-- Real buttons for actions
-- Real links for navigation
-
-Do not create hundreds of components that each contain one wrapper.
-
-## Use content data
-
-Keep repeated visible content in typed data:
+Keep repeated content in typed data:
 
 ```ts
 type Card = {
@@ -149,150 +90,105 @@ type Card = {
 };
 ```
 
-Render repeated items from arrays. Keep visible text easy to inspect and update.
+Render each repeated group from an array.
 
-Do not put private source data in the new application.
+## Tokens
 
-## Create design tokens
-
-Create a small new token system:
+Write a small token set from the observed values:
 
 ```css
 :root {
   --color-bg: #ffffff;
   --color-text: #111111;
-  --color-muted: #6b6b6b;
-  --space-1: 0.25rem;
   --space-2: 0.5rem;
-  --space-3: 0.75rem;
   --space-4: 1rem;
   --radius-card: 0.75rem;
   --content-max: 80rem;
 }
 ```
 
-Use visible measurements to select tokens. Write every declaration independently.
+Use a token for each repeated color, space, radius, and shadow.
 
-Use tokens for repeated colors, spacing, type, radii, and shadows.
+For each font, use one of these methods, in this order:
 
-## Rebuild layout
+1. Use a font file that the user supplies. Store it in the application.
+2. Use a system font stack when the observed font is a system font.
+3. Use the closest available font and record the substitution.
 
-Use normal layout systems:
+Do not load a font from another host at runtime. That breaks the offline test.
 
-- Flexbox for one-dimensional groups
-- Grid for repeated cards and two-dimensional regions
-- Normal document flow for page sections
-- Sticky position only when observed
-- Fixed position only when observed
+## Layout
 
-Avoid large groups of absolute positions. Use absolute position for overlays,
-decorative layers, and observed fixed geometry.
+Use flexbox for a row or a column. Use grid for repeated items and for a
+two-dimensional area. Use normal flow for the sections.
 
-Use content maximum widths and side padding. Do not set every element to a
+Use sticky or fixed position only where you observed it. Use absolute position
+for an overlay, a decorative layer, or observed fixed geometry.
+
+Use a content maximum width and side padding. Do not give each element a
 measured pixel position.
 
-## Rebuild responsive behavior
+## Responsive rules
 
-Start with the small layout. Add a breakpoint only when evidence shows a layout
-change.
+Start with the smallest layout. Add a breakpoint only where the observation
+shows a change of column count, navigation mode, visibility, alignment, spacing,
+type scale, image crop, or order.
 
-For each breakpoint, define the changed behavior:
+Test the widths between the breakpoints. The layout must stay usable there.
 
-- Column count
-- Navigation mode
-- Visibility
-- Alignment
-- Spacing
-- Type scale
-- Image crop
-- Order
+## Assets
 
-Do not add many breakpoints that have no visible purpose.
+Apply the option from the decision table in `SKILL.md`:
 
-Test widths between observed breakpoints. The layout must remain usable there.
+- `Supplied`: put the user files in `public/assets`.
+- `Downloaded`: download the public files of the observed routes into
+  `public/assets`. Keep the original aspect ratio.
+- `Placeholder`: draw a block with HTML and CSS at the observed box size. Use a
+  neutral fill or the average color.
 
-## Handle assets
+Remove the unused images, icons, and fonts of the scaffold.
 
-Put only user-supplied asset files with confirmed reproduction rights in
-`public/assets`.
-Remove unused scaffold images, icons, and fonts.
+Give each image a correct display size and useful alternative text. Do not link
+to another host in the result. Do not put a large file in a data URL.
 
-Use:
+Record each placeholder and each substitution in the report.
 
-- Clear file names
-- Correct image dimensions
-- Correct aspect ratio
-- Local font files that the user supplies and permits
-- Useful alternative text
+## Interaction
 
-Do not discover or download source assets. Do not use remote hotlinks in the
-final result. Do not use data URLs for large assets.
+Hold each visible state in local application state. Examples are an open menu, a
+selected tab, an open accordion, a carousel position, and a field message.
 
-When an asset is unavailable, omit it or create an HTML and CSS placeholder.
-Do not add a substitute asset file. Record the difference.
+Add the keyboard behavior: focus order, activation with Enter or Space, close
+with Escape, and focus return after a dialog closes.
 
-## Rebuild interaction
+Do not connect an account, a checkout, a payment, or a private data service.
+Do not send a form. Show a local message instead.
 
-Use local application state for visible behavior.
+If the evidence does not show a required state, mark that cell as blocked and
+ask for evidence. Do not invent the behavior.
 
-Examples:
+## Motion
 
-- Open and close a menu
-- Select a tab
-- Expand an accordion
-- Move a local carousel
-- Show field validation
+Add motion only where it changes meaning or page character. Use a CSS transition
+for a small state change. Use CSS keyframes for simple repeated motion. Use a
+motion library only where the behavior needs one.
 
-Include keyboard behavior:
+Obey the reduced-motion preference. Do not delay access to content.
 
-- Tab focus
-- Enter or Space activation
-- Escape close when observed
-- Focus return after a dialog closes
-
-If a required state is not visible in the supplied evidence, do not invent it.
-Mark it as blocked and request evidence.
-
-Do not connect account, checkout, payment, tracking, or private data services.
-
-## Rebuild motion
-
-Add motion only when it changes visible meaning or page character.
-
-Use:
-
-- CSS transitions for hover and small state changes
-- CSS keyframes for simple repeated motion
-- A small current motion library only when the behavior requires it
-
-Respect reduced-motion preferences.
-
-Do not delay content access only to copy a decorative animation.
-
-## Prevent false fidelity
+## Do not create false fidelity
 
 Do not:
 
-- Embed the source page
-- Cover the page with a source screenshot
-- Replace text with an image
-- Use a canvas as the full implementation
-- Load source scripts at runtime
-- Load source stylesheets at runtime
-- Call private source services
-- Make any external network request at runtime
-- Hide mismatches outside the tested viewport
-
-The application must remain editable and understandable.
+- Put the source page in a frame
+- Cover the page with a picture of the source
+- Replace text with a picture
+- Draw the full page on a canvas
+- Load a script, a style, a font, or data from another host at runtime
+- Hide a difference outside the tested viewport
 
 ## Build gates
 
-After each major stage:
+After each stage, run the type check, run the production build, read the
+warnings and the errors, and correct the errors.
 
-1. Run type checks when defined.
-2. Run the production build.
-3. Read all warnings and errors.
-4. Fix errors before visual work continues.
-
-Do not treat a successful build as proof of fidelity. Continue with visual and
-behavior validation.
+A successful build does not prove fidelity. Continue with the visual comparison.

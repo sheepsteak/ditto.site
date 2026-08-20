@@ -1,74 +1,59 @@
-# Website Reconstruction Report
+# Reconstruction Report
 
 ## Status
 
-- Final status: Successful, Blocked, or Incomplete
-- Status reason:
+- Final status: `Successful`, `Blocked`, or `Incomplete`
+- Reason:
 
 ## Result
 
 - Output path:
-- Framework:
-- Styling system:
+- Framework and styling:
 - Package manager:
 - Build command:
-- Start or preview command:
+- Start command:
 
 ## Source evidence
 
-- Source type:
-- Source location:
+- Source type and location:
 - Observation date:
-- Routes observed:
-- Viewports observed:
-- Interaction states observed:
+- Routes:
 - Browser and version:
 - Viewport height and device pixel ratio:
 - Locale and time zone:
-- Evidence limitations:
-
-## Implementation
-
-- Routes implemented:
-- Shared components:
-- Local data:
-- Local assets:
-- Local mock behavior:
+- Asset option: `Supplied`, `Downloaded`, or `Placeholder`
+- Evidence limits:
 
 ## Verification
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Dependency install |  |  |
+| Install |  |  |
 | Type check |  |  |
 | Production build |  |  |
 | Local runtime |  |  |
-| 375 px |  |  |
-| 768 px |  |  |
-| 1280 px |  |  |
-| 1920 px |  |  |
-| Required interactions |  |  |
-| Offline runtime with no external request |  |  |
-| Numeric geometry targets |  |  |
+| Offline test |  |  |
+| Geometry targets |  |  |
 | Changed-pixel target |  |  |
+| Required interactions |  |  |
 
-## Route, viewport, and state matrix
+## Matrix
 
 | Route | Width | State | Source evidence | Result evidence | Result |
 | --- | ---: | --- | --- | --- | --- |
 |  |  |  |  |  |  |
 
-## Correction cycles
-
-- Cycles completed:
-- Last cycle with measurable improvement:
-- Correction limit reached:
-
-## Asset status
+## Assets
 
 | Asset | Status | Note |
 | --- | --- | --- |
-|  | User-supplied, omitted, placeholder, missing, or out of scope |  |
+|  | Supplied, downloaded, placeholder, or out of scope |  |
+
+## Correction loops
+
+- Loops completed:
+- Last loop with an improvement:
+- Limit reached:
 
 ## Remaining differences
 
@@ -76,7 +61,6 @@
 | --- | ---: | --- | --- | --- | --- |
 |  |  |  |  |  |  |
 
-## Final statement
+## Statement
 
-State what matches, what was tested, and what remains. Do not state that the
-result is exact.
+State what you tested and what remains. Do not say that the result is exact.
