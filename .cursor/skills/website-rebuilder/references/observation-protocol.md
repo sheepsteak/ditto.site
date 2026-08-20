@@ -22,7 +22,7 @@ Do not collect or reuse:
 - Original JavaScript
 - Original TypeScript
 - Source maps
-- Private API responses
+- Private service responses
 - Authentication tokens
 - Session cookies
 - Hidden user data
